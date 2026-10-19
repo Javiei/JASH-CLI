@@ -168,10 +168,32 @@ jash chat
 ```
 Dentro del chat puedes usar:
 - `/tareas` — Ver tus pendientes sin salir del chat.
+- `/al-dia` — Ponerse al día con todas las tareas pendientes.
+- `/subir` — Subir todos los borradores listos a Moodle.
+- `/revisar [id]` — Auditar borradores contra el mandato oficial del profesor.
+- `/explicar [id]` — Explicar paso a paso qué pide la tarea y conceptos clave.
+- `/profesor` — Menú del modo profesor (explicar o revisar).
 - `/tarea <id>` — Poner el enunciado de una tarea específica en foco.
 - `/borrador <id> [indicaciones]` — Redactar y guardar el borrador en su carpeta.
 - `/sync` — Actualizar con Moodle.
 - `/salir` — Salir.
+
+### 9. 👨‍🏫 Apartado de Profesor (Explicar y Revisar con IA)
+Herramienta pedagógica que actúa como tu tutor personal:
+
+```bash
+# Menú interactivo del profesor:
+jash profesor
+
+# 🔍 Revisar todas las tareas comparando tus borradores contra el mandato:
+jash revisar
+jash revisar 95
+
+# 💡 Explicar de forma didáctica qué pide cada tarea y cómo resolverla:
+jash explicar
+jash explicar 95
+jash explicar --todas
+```
 
 ---
 

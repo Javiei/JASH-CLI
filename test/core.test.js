@@ -195,3 +195,27 @@ test('adaptadores de IA (OpenAI y Ollama) con servidor simulado', async () => {
     server.close();
   }
 });
+
+import { getTaskDraftContent } from '../src/tasks/draft.js';
+import { professorReviewPrompt, professorExplainPrompt } from '../src/ai/prompts.js';
+
+test('modo profesor: prompts y lectura de borrador', () => {
+  const task = {
+    id: '123',
+    name: 'Ensayo Ética',
+    course: 'Filosofía',
+    intro: 'Analiza el imperativo categórico.',
+    local: { draftText: 'El imperativo categórico es...' },
+  };
+
+  const draftText = getTaskDraftContent(task);
+  assert.equal(draftText, 'El imperativo categórico es...');
+
+  const reviewPrompt = professorReviewPrompt(task, { mandato: task.intro, draft: draftText });
+  assert.match(reviewPrompt, /Mandato Oficial del Profesor/);
+  assert.match(reviewPrompt, /Borrador o Trabajo Desarrollado/);
+
+  const explainPrompt = professorExplainPrompt(task);
+  assert.match(explainPrompt, /Mandato Oficial del Profesor/);
+  assert.match(explainPrompt, /Analiza el imperativo categórico/);
+});

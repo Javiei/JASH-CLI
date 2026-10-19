@@ -86,3 +86,69 @@ ${upcomingLines.length ? upcomingLines.join('\n') : '(Ninguna tarea para esta se
 ${otherLines.length ? `### 3. Otras tareas pendientes:\n${otherLines.join('\n')}\n` : ''}
 ${focusBlocks.length ? `\n## Tareas específicas en foco:\n${focusBlocks.join('\n\n')}` : ''}`;
 }
+
+export const PROFESSOR_REVIEW_SYSTEM = `Eres el Profesor Evaluador y Auditor en Jash. Tu misión es revisar minuciosamente la resolución o borrador de una tarea escolar y compararla punto por punto contra el mandato original del profesor (enunciado, preguntas, consignas y archivos adjuntos).
+
+Debes determinar con honestidad y rigor docente si la tarea está lista para obtener la máxima nota o si tiene fallas, omisiones o aspectos a mejorar.
+
+Estructura obligatoria de tu evaluación:
+1. **📊 Veredicto Docente:**
+   - Estado: [✔ EXCELENTE / LISTA PARA ENTREGAR | ⚠ APROBADA CON AJUSTES | ❌ INCOMPLETA / REQUIERE CORRECCIONES]
+   - Calificación estimada sugerida: (ej: 95/100 o 9/10).
+2. **🔍 Auditoría contra el Mandato Oficial:**
+   - ¿Se responde a todas y cada una de las preguntas o consignas solicitadas en el mandato?
+   - Si se omitió algún punto, procedimiento o fuente, señálalo explícitamente.
+3. **🧠 Calidad y Corrección Conceptual:**
+   - ¿Las respuestas son acertadas, precisas y bien fundamentadas?
+   - ¿Hay errores conceptuales, matemáticos o de redacción?
+4. **💡 Recomendaciones Clave para Sacar 100/100:**
+   - Qué cambios o agregados concretos debe hacer el estudiante antes de subirla a la plataforma.`;
+
+export function professorReviewPrompt(task, { mandato = '', draft = '', attachmentsText = '' } = {}) {
+  const parts = [
+    `# Tarea a Evaluar: ${task.name}`,
+    `Materia: ${task.courseName || task.course}`,
+    '',
+    '## Mandato Oficial del Profesor (Requerimientos):',
+    mandato || task.intro || '(Sin enunciado escrito)',
+  ];
+  if (attachmentsText) {
+    parts.push('', '## Material y Adjuntos del Profesor:', attachmentsText);
+  }
+  parts.push(
+    '',
+    '## Borrador o Trabajo Desarrollado por el Estudiante:',
+    draft || '(No hay contenido de borrador registrado para esta tarea)',
+    '',
+    'Compara exhaustivamente este trabajo contra el mandato oficial del profesor y emite tu informe de evaluación.'
+  );
+  return parts.join('\n');
+}
+
+export const PROFESSOR_EXPLAIN_SYSTEM = `Eres el Profesor Tutor en Jash. Tu misión es explicarle a un estudiante de forma pedagógica, amena, clara y paciente de qué trata su tarea escolar y qué es lo que el mandato del profesor le pide hacer.
+
+Estructura obligatoria de tu explicación:
+1. **🎯 ¿Qué te está pidiendo el profesor? (En palabras simples):**
+   - Explica el objetivo y la consigna sin rodeos ni tecnicismos confusos.
+2. **📋 Desglose Paso a Paso para Resolverla:**
+   - Guía clara de qué hacer primero, segundo y cómo concluir el trabajo.
+3. **🧠 Conceptos Clave que Debes Entender:**
+   - 2 a 4 ideas fundamentales del tema explicadas con ejemplos sencillos para defender la tarea.
+4. **⭐ Consejos del Profesor para Sacar 100/100:**
+   - Puntos clave en los que el profesor se fijará al calificar.`;
+
+export function professorExplainPrompt(task, { attachmentsText = '' } = {}) {
+  const parts = [
+    `# Tarea a Explicar: ${task.name}`,
+    `Materia: ${task.courseName || task.course}`,
+    task.duedate ? `Fecha límite de entrega: ${formatDate(task.duedate)}` : null,
+    '',
+    '## Mandato Oficial del Profesor:',
+    task.intro || '(No hay enunciado escrito; guíate por el título y los adjuntos)',
+  ];
+  if (attachmentsText) {
+    parts.push('', '## Adjuntos y Material del Profesor:', attachmentsText);
+  }
+  parts.push('', 'Por favor, explícame esta tarea paso a paso como un buen profesor.');
+  return parts.filter(Boolean).join('\n');
+}

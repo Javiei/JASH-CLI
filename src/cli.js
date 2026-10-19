@@ -10,6 +10,7 @@ import { registro, login, config, perfilLista, perfilUsar, perfilEliminar } from
 import { sincronizar, tareas, borrador, abrir, entregar, ponerseAlDia, subirBorradores } from './commands/tasks.js';
 import { recordatorios, programar, quitar, printReminders } from './commands/reminders.js';
 import { chat } from './commands/chat.js';
+import { menuProfesor, revisarTareas, explicarTareas } from './commands/professor.js';
 import { runMcpServer } from './mcp/server.js';
 import { checkForUpdate, updateSelf, autoUpdateIfAvailable } from './system/updater.js';
 
@@ -143,6 +144,7 @@ export function buildProgram() {
         { name: `📋  Ver mis tareas (${overdue.length} vencidas · ${week.length} esta semana)`, value: 'tareas' },
         { name: '🚀  Ponerse al día (Generar borradores con IA de TODAS las pendientes)', value: 'al-dia' },
         { name: '📤  Subir tareas a Moodle (Enviar borradores listos a la plataforma)', value: 'subir' },
+        { name: '👨‍🏫  Apartado de Profesor (Explicar o Revisar tareas con IA)', value: 'profesor' },
         { name: '✨  Generar borradores con IA solo de esta semana', value: 'borrador' },
         { name: '🔄  Sincronizar tareas nuevas de Moodle', value: 'sync' },
         { name: '🌸  Ver mascota de Jash (Dot Art)', value: 'mascota' },
@@ -164,6 +166,9 @@ export function buildProgram() {
         break;
       case 'subir':
         await subirBorradores({}, g());
+        break;
+      case 'profesor':
+        await menuProfesor(g());
         break;
       case 'borrador':
         await borrador([], { semana: true }, g());
@@ -248,6 +253,34 @@ export function buildProgram() {
     .description('sube todos los borradores listos directamente a Moodle')
     .option('--final', 'además las envía definitivamente para calificar')
     .action((opts) => subirBorradores(opts, g()));
+
+  // ----- Apartado de Profesor -----
+  program
+    .command('profesor [accion]')
+    .alias('profe')
+    .description('apartado de profesor: explicar tareas o revisar borradores contra el mandato')
+    .option('-i, --id <tarea>', 'ID o nombre de una tarea específica')
+    .option('--todas', 'explicar todas las tareas')
+    .action(async (accion, opts) => {
+      if (accion === 'revisar') {
+        await revisarTareas(opts, g());
+      } else if (accion === 'explicar') {
+        await explicarTareas(opts, g());
+      } else {
+        await menuProfesor(g());
+      }
+    });
+
+  program
+    .command('revisar [id]')
+    .description('revisa las tareas comparándolas minuciosamente con el mandato oficial')
+    .action((id) => revisarTareas({ id }, g()));
+
+  program
+    .command('explicar [id]')
+    .description('explica de forma pedagógica el mandato y pasos para resolver la tarea')
+    .option('--todas', 'explicar todas las tareas')
+    .action((id, opts) => explicarTareas({ id, ...opts }, g()));
 
   // ----- Recordatorios -----
   const rec = program

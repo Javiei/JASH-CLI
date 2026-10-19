@@ -10,11 +10,15 @@ import { upcoming, overdueTasks, findTask, sortedTasks, isPending } from '../tas
 import { generateDraft, deleteDraft } from '../tasks/draft.js';
 import { chatHud, animateLines, streamMarkdown, mascotArt } from '../ui/format.js';
 import { printTasks, runSync, ponerseAlDia, subirBorradores } from './tasks.js';
+import { menuProfesor, revisarTareas, explicarTareas } from './professor.js';
 
 const HELP = `
   ${chalk.cyan('/tareas')}                   muestra la tabla de todas tus tareas pendientes
   ${chalk.cyan('/al-dia')}                   genera borradores de TODAS las tareas pendientes
   ${chalk.cyan('/subir')}                    sube todos los borradores listos a Moodle
+  ${chalk.cyan('/revisar [id]')}             audita las tareas comparándolas con el mandato
+  ${chalk.cyan('/explicar [id]')}            explica paso a paso el mandato y conceptos
+  ${chalk.cyan('/profesor')}                 menú del modo profesor (explicar o revisar)
   ${chalk.cyan('/tarea <id>')}               pone el enunciado de una tarea en contexto
   ${chalk.cyan('/borrador <id> [texto]')}    genera/rehace el borrador en Word (.docx)
   ${chalk.cyan('/eliminar <id>')}            elimina el borrador y desmarca la tarea
@@ -191,6 +195,16 @@ export async function chat(gopts) {
             break;
           case 'subir':
             await subirBorradores({}, gopts);
+            break;
+          case 'profesor':
+          case 'profe':
+            await menuProfesor(gopts);
+            break;
+          case 'revisar':
+            await revisarTareas({ id: arg }, gopts);
+            break;
+          case 'explicar':
+            await explicarTareas({ id: arg }, gopts);
             break;
           case 'sync':
             await runSync(session, getClient());

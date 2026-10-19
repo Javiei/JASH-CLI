@@ -116,6 +116,7 @@ export async function generateDraft(session, ai, client, task, { instructions = 
     state: 'borrador',
     dir,
     docxFile: docxPath,
+    draftText: draft,
     draftAt: new Date().toISOString(),
     model: ai.label,
   };
@@ -123,6 +124,39 @@ export async function generateDraft(session, ai, client, task, { instructions = 
   session.saveState();
 
   return { dir, draftFile: docxPath, docxFile: docxPath, hasNotes: Boolean(notes) };
+}
+
+/**
+ * Obtiene el texto del borrador de una tarea (de memoria, de entrega/texto.md o de README.md).
+ */
+export function getTaskDraftContent(task) {
+  if (task.local?.draftText) return task.local.draftText;
+  const dir = task.local?.dir;
+  if (!dir || !fs.existsSync(dir)) return null;
+
+  const textoMd = path.join(dir, 'entrega', 'texto.md');
+  if (fs.existsSync(textoMd)) {
+    try {
+      return fs.readFileSync(textoMd, 'utf8').trim();
+    } catch {
+      /* continue */
+    }
+  }
+
+  const readmePath = path.join(dir, 'README.md');
+  if (fs.existsSync(readmePath)) {
+    try {
+      const readme = fs.readFileSync(readmePath, 'utf8');
+      const expMatch = readme.match(
+        /## 💡 Explicación y Resolución de la Tarea[\s\S]*?### Resumen del contenido:\s*\n+([\s\S]*?)(?:\n### 📝 Notas|\n---\n_Tip:)/
+      );
+      if (expMatch) return expMatch[1].trim();
+    } catch {
+      /* continue */
+    }
+  }
+
+  return null;
 }
 
 /**
