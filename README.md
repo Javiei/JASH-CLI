@@ -1,6 +1,14 @@
-# 📚 Jash CLI
+```text
+      ██╗ █████╗ ███████╗██╗  ██╗   ┌───┐
+      ██║██╔══██╗██╔════╝██║  ██║   │ 宿 │
+      ██║███████║███████╗███████║   │ 題 │
+ ██   ██║██╔══██║╚════██║██╔══██║   │ 智 │
+ ╚█████╔╝██║  ██║███████║██║  ██║   │ 慧 │
+  ╚════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   └───┘
+   › Tu asistente de tareas · Moodle + IA
+```
 
-> **Tu asistente de tareas escolares: Moodle + IA en tu terminal.**
+> **Tu asistente escolar inteligente: Moodle + IA en tu terminal.**
 
 Jash es un CLI instalable globalmente mediante `npm` que se conecta directamente a la plataforma **Moodle** de tu colegio y a tus modelos de IA favoritos (**OpenAI**, **Anthropic Claude**, **Google Gemini** u **Ollama local gratis**) para organizar tus tareas semanales, preparar borradores de alta calidad, notificarte entregas y subir las soluciones automáticamente cuando tú lo apruebes.
 
