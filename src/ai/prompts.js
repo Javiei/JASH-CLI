@@ -89,12 +89,13 @@ ${focusBlocks.length ? `\n## Tareas específicas en foco:\n${focusBlocks.join('\
 
 export const PROFESSOR_REVIEW_SYSTEM = `Eres el Profesor Evaluador y Auditor en Jash. Tu misión es revisar minuciosamente la resolución o borrador de una tarea escolar y compararla punto por punto contra el mandato original del profesor (enunciado, preguntas, consignas y archivos adjuntos).
 
-Debes determinar con honestidad y rigor docente si la tarea está lista para obtener la máxima nota o si tiene fallas, omisiones o aspectos a mejorar.
+Debes determinar con honestidad y rigor docente si la tarea está lista para obtener la máxima nota (100/100) o si tiene fallas, omisiones o aspectos a mejorar.
 
 Estructura obligatoria de tu evaluación:
 1. **📊 Veredicto Docente:**
    - Estado: [✔ EXCELENTE / LISTA PARA ENTREGAR | ⚠ APROBADA CON AJUSTES | ❌ INCOMPLETA / REQUIERE CORRECCIONES]
-   - Calificación estimada sugerida: (ej: 95/100 o 9/10).
+   - Calificación: <PUNTUACIÓN>/100 (ej: 100/100, 95/100, 80/100).
+   - ¿Aprobada 100/100?: [SÍ / NO]
 2. **🔍 Auditoría contra el Mandato Oficial:**
    - ¿Se responde a todas y cada una de las preguntas o consignas solicitadas en el mandato?
    - Si se omitió algún punto, procedimiento o fuente, señálalo explícitamente.
@@ -102,7 +103,62 @@ Estructura obligatoria de tu evaluación:
    - ¿Las respuestas son acertadas, precisas y bien fundamentadas?
    - ¿Hay errores conceptuales, matemáticos o de redacción?
 4. **💡 Recomendaciones Clave para Sacar 100/100:**
-   - Qué cambios o agregados concretos debe hacer el estudiante antes de subirla a la plataforma.`;
+   - Qué cambios, correcciones o agregados concretos debe tener el trabajo para alcanzar el 100/100 perfecto.`;
+
+/**
+ * Evalúa el texto de la revisión del profesor para determinar si la tarea tiene 100/100 o debe rehacerse.
+ */
+export function evaluateProfessorReview(reviewText) {
+  if (!reviewText) {
+    return { is100: false, score: 0, feedback: '', status: 'SIN_BORRADOR' };
+  }
+
+  // Extraer calificación numérica si existe (ej: "100/100", "95/100", "Calificación: 85/100")
+  const scoreMatch = reviewText.match(/(?:Calificación|Puntuación|Nota)[^:\n]*:\s*(\d{1,3})\s*\/\s*100/i);
+  let score = null;
+  if (scoreMatch) {
+    score = parseInt(scoreMatch[1], 10);
+  }
+
+  // Comprobar afirmación explícita de aprobación 100/100
+  const yes100 = /¿(?:Aprobada|Cumple)\s*100\/100\?:\s*S[ÍI]/i.test(reviewText);
+  const no100 = /¿(?:Aprobada|Cumple)\s*100\/100\?:\s*NO/i.test(reviewText);
+
+  // Estados
+  const isExcellent = /\[✔ EXCELENTE/i.test(reviewText);
+  const isWarning = /\[⚠ APROBADA CON AJUSTES/i.test(reviewText);
+  const isIncomplete = /\[❌ INCOMPLETA/i.test(reviewText);
+
+  let is100 = false;
+  if (score !== null) {
+    is100 = score >= 100 && !no100 && !isWarning && !isIncomplete;
+  } else if (yes100 && !no100) {
+    is100 = true;
+    score = 100;
+  } else if (isExcellent && !isWarning && !isIncomplete && !no100) {
+    is100 = true;
+    score = 100;
+  } else {
+    is100 = false;
+    score = score ?? 80;
+  }
+
+  // Extraer recomendaciones o feedback de mejora
+  let feedback = '';
+  const recMatch = reviewText.match(/(?:💡\s*Recomendaciones|Recomendaciones Clave)[^:\n]*:?\s*([\s\S]*)$/i);
+  if (recMatch) {
+    feedback = recMatch[1].trim();
+  } else {
+    feedback = reviewText.trim();
+  }
+
+  return {
+    is100,
+    score: score ?? 0,
+    feedback,
+    status: is100 ? 'EXCELENTE' : isWarning ? 'AJUSTES' : isIncomplete ? 'INCOMPLETA' : 'REVISAR',
+  };
+}
 
 export function professorReviewPrompt(task, { mandato = '', draft = '', attachmentsText = '' } = {}) {
   const parts = [

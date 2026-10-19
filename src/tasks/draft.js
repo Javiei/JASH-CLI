@@ -231,6 +231,7 @@ export async function deleteDraft(session, task) {
   delete task.local.docxFile;
   delete task.local.draftAt;
   delete task.local.model;
+  delete task.local.draftText;
 
   session.state.tasks[task.id] = task;
   session.saveState();

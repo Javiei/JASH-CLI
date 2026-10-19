@@ -197,7 +197,7 @@ test('adaptadores de IA (OpenAI y Ollama) con servidor simulado', async () => {
 });
 
 import { getTaskDraftContent } from '../src/tasks/draft.js';
-import { professorReviewPrompt, professorExplainPrompt } from '../src/ai/prompts.js';
+import { professorReviewPrompt, professorExplainPrompt, evaluateProfessorReview } from '../src/ai/prompts.js';
 
 test('modo profesor: prompts y lectura de borrador', () => {
   const task = {
@@ -218,4 +218,37 @@ test('modo profesor: prompts y lectura de borrador', () => {
   const explainPrompt = professorExplainPrompt(task);
   assert.match(explainPrompt, /Mandato Oficial del Profesor/);
   assert.match(explainPrompt, /Analiza el imperativo categórico/);
+});
+
+test('evaluateProfessorReview detecta tareas con 100/100 e imperfectas que requieren rehacerse', () => {
+  const sample100 = `
+1. **📊 Veredicto Docente:**
+   - Estado: [✔ EXCELENTE / LISTA PARA ENTREGAR]
+   - Calificación: 100/100.
+   - ¿Aprobada 100/100?: SÍ
+2. **🔍 Auditoría contra el Mandato Oficial:**
+   - Cumple todos los puntos.
+`;
+  const res100 = evaluateProfessorReview(sample100);
+  assert.equal(res100.is100, true);
+  assert.equal(res100.score, 100);
+
+  const sampleImperfect = `
+1. **📊 Veredicto Docente:**
+   - Estado: [⚠ APROBADA CON AJUSTES]
+   - Calificación: 85/100.
+   - ¿Aprobada 100/100?: NO
+2. **🔍 Auditoría contra el Mandato Oficial:**
+   - Faltó responder la pregunta 3 sobre microempresas.
+4. **💡 Recomendaciones Clave para Sacar 100/100:**
+   - Desarrollar la pregunta 3 en profundidad con ejemplos reales.
+`;
+  const resImperfect = evaluateProfessorReview(sampleImperfect);
+  assert.equal(resImperfect.is100, false);
+  assert.equal(resImperfect.score, 85);
+  assert.match(resImperfect.feedback, /Desarrollar la pregunta 3/);
+
+  const resEmpty = evaluateProfessorReview(null);
+  assert.equal(resEmpty.is100, false);
+  assert.equal(resEmpty.score, 0);
 });
