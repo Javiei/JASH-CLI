@@ -41,18 +41,20 @@ Además, cuenta con un servidor **MCP (Model Context Protocol)** integrado para 
 ### 1. Requisitos previos
 - [Node.js](https://nodejs.org/) v18.17 o superior (`node -v`).
 
-### 2. Instalación local como comando global
-Desde la carpeta del proyecto:
+### 2. Instalación global directa desde GitHub
+En cualquier computadora con Node.js instalado, ejecuta directamente:
 
 ```bash
-# Instalar dependencias
-npm install
-
-# Enlazar globalmente el comando jash en tu sistema
-npm link
+npm install -g https://github.com/Javiei/jash.git
 ```
 
-*(O puedes instalarlo globalmente desde el directorio con `npm install -g .`)*
+### 3. Instalación local para desarrollo
+Si clonaste o descargaste la carpeta:
+
+```bash
+npm install
+npm link
+```
 
 Una vez enlazado, puedes ejecutar `jash` desde cualquier ventana de PowerShell o terminal:
 
