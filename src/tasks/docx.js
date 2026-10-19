@@ -11,13 +11,33 @@ import {
   BorderStyle,
 } from 'docx';
 
+// Paleta de colores clásica y moderna de Word / Gemini (Tema Office Accent 1)
+const WORD_COLORS = {
+  TITLE: '1F4E79', // Azul profundo formal para título principal
+  H1: '2E75B6', // Azul característico de Word para Encabezado 1
+  H2: '1F4E79', // Azul marino para Encabezado 2
+  H3: '2E75B6', // Azul Word para Encabezado 3
+  H4: '5B9BD5', // Azul celeste suave para Encabezado 4
+  BODY: '262626', // Gris oscuro natural (mucho más agradable que negro puro)
+  MUTED: '595959', // Gris para subtítulos y metadatos
+  TABLE_HEADER_BG: 'D9E8F5', // Fondo azul claro característico de tablas de Word
+  TABLE_HEADER_TEXT: '1F4E79',
+  TABLE_BORDER: 'BDD7EE', // Bordes suaves en tono azul de Word
+  CALLOUT_BG: 'F0F4F8', // Fondo sutil para citas o notas destacadas
+  CALLOUT_BORDER: '2E75B6',
+  DIVIDER: 'BDD7EE',
+  CODE_BG: 'F1F5F9',
+  CODE_TEXT: '0F172A',
+};
+
 /**
  * Convierte texto con formato Markdown inline a TextRuns de docx (negritas, cursivas, negrita-cursiva, código).
- * Sin colores artificiales ni subrayados forzados: estilo profesional y limpio.
+ * Aplica los colores predeterminados de Word para que se vea fresco, casual y con vida.
  */
 function parseInlineRuns(text, baseStyle = {}) {
   const defaultFont = baseStyle.font || 'Calibri';
   const defaultSize = baseStyle.size || 24; // 12pt en medios puntos
+  const defaultColor = baseStyle.color || WORD_COLORS.BODY;
   const runs = [];
 
   // Regex para negrita-cursiva (***...***), negrita (**...**), cursiva (*...*), código (`...`)
@@ -34,6 +54,7 @@ function parseInlineRuns(text, baseStyle = {}) {
           italics: true,
           font: defaultFont,
           size: defaultSize,
+          color: defaultColor,
           ...baseStyle,
         })
       );
@@ -44,6 +65,7 @@ function parseInlineRuns(text, baseStyle = {}) {
           bold: true,
           font: defaultFont,
           size: defaultSize,
+          color: defaultColor,
           ...baseStyle,
         })
       );
@@ -54,6 +76,7 @@ function parseInlineRuns(text, baseStyle = {}) {
           italics: true,
           font: defaultFont,
           size: defaultSize,
+          color: defaultColor,
           ...baseStyle,
         })
       );
@@ -63,6 +86,8 @@ function parseInlineRuns(text, baseStyle = {}) {
           text: part.slice(1, -1),
           font: 'Consolas',
           size: Math.max(18, defaultSize - 2),
+          color: WORD_COLORS.CODE_TEXT,
+          shading: { fill: WORD_COLORS.CODE_BG },
         })
       );
     } else {
@@ -71,13 +96,14 @@ function parseInlineRuns(text, baseStyle = {}) {
           text: part,
           font: defaultFont,
           size: defaultSize,
+          color: defaultColor,
           ...baseStyle,
         })
       );
     }
   }
 
-  return runs.length ? runs : [new TextRun({ text, font: defaultFont, size: defaultSize, ...baseStyle })];
+  return runs.length ? runs : [new TextRun({ text, font: defaultFont, size: defaultSize, color: defaultColor, ...baseStyle })];
 }
 
 const isTableRow = (line) => {
@@ -88,7 +114,7 @@ const isTableRow = (line) => {
 const isTableDivider = (line) => /^\|(\s*:?-+:?\s*\|)+$/.test(line.trim());
 
 /**
- * Convierte un bloque de líneas de tabla Markdown en una Table nativa de Word.
+ * Convierte un bloque de líneas de tabla Markdown en una Table nativa de Word con el estilo por defecto de Word (azul claro).
  */
 function parseTableBlock(tableLines) {
   const rows = [];
@@ -107,11 +133,20 @@ function parseTableBlock(tableLines) {
       return new TableCell({
         children: [
           new Paragraph({
-            children: parseInlineRuns(cellText, isHeader ? { bold: true } : {}),
+            children: parseInlineRuns(cellText, {
+              bold: isHeader,
+              color: isHeader ? WORD_COLORS.TABLE_HEADER_TEXT : WORD_COLORS.BODY,
+            }),
             spacing: { before: 80, after: 80 },
           }),
         ],
-        shading: isHeader ? { fill: 'F9FAFB' } : undefined,
+        shading: isHeader ? { fill: WORD_COLORS.TABLE_HEADER_BG } : undefined,
+        borders: {
+          top: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
+          bottom: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
+          left: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
+          right: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
+        },
         margins: {
           top: 100,
           bottom: 100,
@@ -133,8 +168,8 @@ function parseTableBlock(tableLines) {
 
 /**
  * Genera un Buffer de documento Word (.docx) a partir de contenido en Markdown.
- * Respeta el diseño generado por la IA (formato específico o estructura profesional estándar).
- * Sin colores llamativos ni marcos forzados: tipografía sobria, tablas reales y jerarquía limpia.
+ * Utiliza el formato casual, visual y bonito por defecto de Word / Gemini:
+ * Títulos con los clásicos tonos azules de Word, tablas celestes impecables y tipografía agradable.
  * @param {object} opts
  * @param {string} opts.title Título de la tarea
  * @param {string} [opts.course] Materia
@@ -145,7 +180,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
   const children = [];
   const lines = content.split('\n');
 
-  // Si la IA no empezó con un título (# Título), colocamos el título de la tarea como Heading 1 limpio
+  // Si la IA no empezó con un título (# Título), colocamos el título con el azul característico de Word
   const startsWithHeading = lines.some((l) => l.trim().startsWith('# '));
   if (!startsWithHeading && title) {
     children.push(
@@ -156,10 +191,11 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
             text: title,
             bold: true,
             font: 'Calibri',
-            size: 32, // 16pt
+            size: 36, // 18pt
+            color: WORD_COLORS.TITLE,
           }),
         ],
-        spacing: { before: 0, after: 140 },
+        spacing: { before: 0, after: 120 },
       })
     );
 
@@ -173,7 +209,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
               italics: true,
               font: 'Calibri',
               size: 22, // 11pt
-              color: '4B5563',
+              color: WORD_COLORS.MUTED,
             }),
           ],
           spacing: { after: 240 },
@@ -211,9 +247,10 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
                 text: cl || ' ',
                 font: 'Consolas',
                 size: 20, // 10pt
+                color: WORD_COLORS.CODE_TEXT,
               }),
             ],
-            shading: { fill: 'F3F4F6' },
+            shading: { fill: WORD_COLORS.CODE_BG },
             spacing: { before: 20, after: 20, line: 240 },
           })
         );
@@ -238,10 +275,10 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
         new Paragraph({
           border: {
             bottom: {
-              color: 'E5E7EB',
+              color: WORD_COLORS.DIVIDER,
               space: 1,
               value: BorderStyle.SINGLE,
-              size: 6,
+              size: 8,
             },
           },
           spacing: { before: 180, after: 180 },
@@ -251,12 +288,12 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
       continue;
     }
 
-    // Títulos y subtítulos
+    // Títulos y subtítulos con la paleta de colores de Word
     if (line.startsWith('# ')) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
-          children: parseInlineRuns(line.slice(2).trim(), { size: 32, bold: true }),
+          children: parseInlineRuns(line.slice(2).trim(), { size: 32, bold: true, color: WORD_COLORS.H1 }),
           spacing: { before: 280, after: 120 },
         })
       );
@@ -264,7 +301,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          children: parseInlineRuns(line.slice(3).trim(), { size: 28, bold: true }),
+          children: parseInlineRuns(line.slice(3).trim(), { size: 26, bold: true, color: WORD_COLORS.H2 }),
           spacing: { before: 240, after: 100 },
         })
       );
@@ -272,7 +309,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_3,
-          children: parseInlineRuns(line.slice(4).trim(), { size: 24, bold: true }),
+          children: parseInlineRuns(line.slice(4).trim(), { size: 24, bold: true, color: WORD_COLORS.H3 }),
           spacing: { before: 200, after: 80 },
         })
       );
@@ -280,25 +317,26 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_4,
-          children: parseInlineRuns(line.slice(5).trim(), { size: 22, bold: true, italics: true }),
+          children: parseInlineRuns(line.slice(5).trim(), { size: 22, bold: true, color: WORD_COLORS.H4 }),
           spacing: { before: 160, after: 60 },
         })
       );
     } else if (line.startsWith('> ')) {
-      // Citas o notas destacadas estilo documento
+      // Citas o notas destacadas estilo Word (fondo celeste tenue y borde izquierdo azul)
       children.push(
         new Paragraph({
-          children: parseInlineRuns(line.slice(2).trim(), { italics: true }),
-          indent: { left: 720 },
+          children: parseInlineRuns(line.slice(2).trim(), { italics: true, color: WORD_COLORS.H2 }),
+          shading: { fill: WORD_COLORS.CALLOUT_BG },
+          indent: { left: 480 },
           border: {
             left: {
-              color: '9CA3AF',
+              color: WORD_COLORS.CALLOUT_BORDER,
               space: 14,
               value: BorderStyle.SINGLE,
-              size: 12,
+              size: 16,
             },
           },
-          spacing: { before: 80, after: 120, line: 276 },
+          spacing: { before: 100, after: 140, line: 276 },
         })
       );
     } else if (/^[-*+]\s+/.test(line)) {
@@ -319,7 +357,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
         })
       );
     } else {
-      // Párrafo estándar
+      // Párrafo estándar en gris natural de Word
       children.push(
         new Paragraph({
           children: parseInlineRuns(line),
@@ -338,7 +376,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
           run: {
             font: 'Calibri',
             size: 24, // 12pt
-            color: '111827', // Negro/carbón natural formal
+            color: WORD_COLORS.BODY,
           },
           paragraph: {
             spacing: {
