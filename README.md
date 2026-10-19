@@ -53,7 +53,7 @@ Además, cuenta con un servidor **MCP (Model Context Protocol)** integrado para 
 En cualquier computadora con Node.js instalado, ejecuta directamente:
 
 ```bash
-npm install -g https://github.com/Javiei/jash.git
+npm install -g https://github.com/Javiei/JASH-CLI.git
 ```
 
 ### 3. Instalación local para desarrollo
