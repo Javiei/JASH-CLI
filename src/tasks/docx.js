@@ -170,11 +170,10 @@ function createAnswerParagraph(rawText) {
 }
 
 /**
- * Crea la tarjeta superior de metadatos (Estudiante, Materia, Actividad, Fecha).
+ * Crea la tarjeta superior de metadatos (Estudiante, Materia, Tema / Actividad).
+ * Sin fecha dentro del documento para evitar inconsistencias o fechas no deseadas.
  */
 function createMetadataCard({ author = '', course = '', title = '', institution = '' }) {
-  const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: {
@@ -221,29 +220,16 @@ function createMetadataCard({ author = '', course = '', title = '', institution 
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 4680, type: WidthType.DXA },
+            columnSpan: 2,
+            width: { size: 9360, type: WidthType.DXA },
             shading: { fill: DOCX_THEME.CARD_BG },
             margins: { top: 100, bottom: 100, left: 160, right: 160 },
             children: [
               new Paragraph({
                 spacing: { before: 0, after: 0 },
                 children: [
-                  new TextRun({ text: 'Actividad: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
+                  new TextRun({ text: 'Tema / Actividad: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
                   new TextRun({ text: title || 'Tarea', color: DOCX_THEME.LABEL_DARK, size: 19, font: 'Calibri' }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 4680, type: WidthType.DXA },
-            shading: { fill: DOCX_THEME.CARD_BG },
-            margins: { top: 100, bottom: 100, left: 160, right: 160 },
-            children: [
-              new Paragraph({
-                spacing: { before: 0, after: 0 },
-                children: [
-                  new TextRun({ text: 'Fecha: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
-                  new TextRun({ text: fecha, color: DOCX_THEME.LABEL_DARK, size: 19, font: 'Calibri' }),
                 ],
               }),
             ],
