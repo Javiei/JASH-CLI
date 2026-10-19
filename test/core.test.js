@@ -54,14 +54,41 @@ test('taskDir organiza directamente por Materia/Tarea sin filtro de semana', () 
   assert.ok(!dir.includes('Semana'));
 });
 
-test('createDocxBuffer genera un archivo Word válido', async () => {
+test('createDocxBuffer genera un archivo Word válido con tablas, listas y formato limpio', async () => {
+  const content = [
+    '# Título del Trabajo',
+    '## 1. Introducción',
+    'Texto normal con **negrita**, *cursiva* y `código`.',
+    '',
+    '> Cita destacada del autor',
+    '',
+    '- Elemento con viñeta 1',
+    '- Elemento con viñeta 2',
+    '',
+    '1. Primer paso numerado',
+    '2. Segundo paso numerado',
+    '',
+    '| Columna A | Columna B |',
+    '|---|---|',
+    '| Dato 1 | Dato 2 |',
+    '',
+    '```python',
+    'def hola():',
+    '    return "mundo"',
+    '```',
+    '',
+    '---',
+    '',
+    'Conclusión final.',
+  ].join('\n');
+
   const buf = await createDocxBuffer({
     title: 'Tarea 1',
     course: 'Historia',
-    content: '# Introducción\n\nTexto con **negrita** y *cursiva*.\n- Item 1\n- Item 2',
+    content,
   });
   assert.ok(Buffer.isBuffer(buf));
-  assert.ok(buf.length > 1000);
+  assert.ok(buf.length > 2000);
 });
 
 import { deleteDraft } from '../src/tasks/draft.js';
