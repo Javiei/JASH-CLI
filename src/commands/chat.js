@@ -46,6 +46,11 @@ function renderMd(text) {
   md = md.replace(/\*\*(.+?)\*\*/g, (_, t) => chalk.bold.white(t));
   md = md.replace(/\*(.+?)\*/g, (_, t) => chalk.italic(t));
 
+  // Resaltado de Respuestas / Soluciones
+  md = md.replace(/(\b(?:Respuesta|Solución|Rpta):\s*)(.*)/gi, (_, label, rest) => {
+    return chalk.hex('#38bdf8').bold.underline(label) + chalk.hex('#f1f5f9')(rest);
+  });
+
   // Código en línea
   md = md.replace(/`([^`\n]+)`/g, (_, t) => chalk.hex('#38bdf8').bgHex('#0f172a')(` ${t} `));
 

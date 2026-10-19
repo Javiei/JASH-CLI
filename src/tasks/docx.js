@@ -1,17 +1,28 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ShadingType, BorderStyle } from 'docx';
 
 /**
- * Convierte texto en formato Markdown a runs de texto con negritas y cursivas.
+ * Convierte texto en formato Markdown a runs de texto con negritas, cursivas y subrayados de respuestas.
  */
 function parseInlineRuns(text) {
   const runs = [];
-  // Tokenizar por negritas (**texto**) y cursivas (*texto*) y código (`texto`)
-  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|[^*`]+)/g;
+  // Tokenizar por respuestas (**Respuesta:**), negritas (**texto**), cursivas (*texto*) y código (`texto`)
+  const regex = /(\*{0,2}(?:Respuesta|Rpta|Solución|Desarrollo):\*{0,2}|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|[^*`:]+|:)/gi;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
     const part = match[0];
-    if (part.startsWith('**') && part.endsWith('**')) {
+    if (/^\*{0,2}(?:Respuesta|Rpta|Solución|Desarrollo):\*{0,2}$/i.test(part)) {
+      runs.push(
+        new TextRun({
+          text: part.replace(/\*/g, '') + ' ',
+          bold: true,
+          underline: { type: 'single' },
+          color: '0369A1', // Azul destacado
+          font: 'Calibri',
+          size: 24,
+        })
+      );
+    } else if (part.startsWith('**') && part.endsWith('**')) {
       runs.push(
         new TextRun({
           text: part.slice(2, -2),
@@ -53,6 +64,7 @@ function parseInlineRuns(text) {
 
 /**
  * Genera un Buffer de documento Word (.docx) a partir de contenido en Markdown.
+ * Las respuestas se resaltan con subrayado, borde lateral y un fondo claro sutil.
  * @param {object} opts
  * @param {string} opts.title Título de la tarea
  * @param {string} [opts.course] Materia
@@ -104,7 +116,7 @@ export async function createDocxBuffer({ title, course = '', author = '', conten
   const lines = content.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    let line = lines[i].trim();
     if (!line) {
       // Espacio entre párrafos
       children.push(new Paragraph({ spacing: { after: 120 } }));
@@ -159,12 +171,40 @@ export async function createDocxBuffer({ title, course = '', author = '', conten
           spacing: { before: 200, after: 100 },
         })
       );
+    } else if (line.startsWith('> ') || /^(\*{0,2}(?:Respuesta|Rpta|Solución|Desarrollo):\*{0,2})/i.test(line)) {
+      // Respuesta o bloque de solución destacado con fondo blanco/gris perla suave y borde
+      const cleanLine = line.startsWith('> ') ? line.slice(2).trim() : line;
+      children.push(
+        new Paragraph({
+          children: parseInlineRuns(cleanLine),
+          shading: {
+            type: ShadingType.CLEAR,
+            fill: 'F1F5F9', // Fondo blanco perla / gris tenue sutil
+          },
+          border: {
+            left: {
+              color: '0284C7', // Borde lateral cyan/azul que demarca la respuesta
+              space: 14,
+              value: BorderStyle.SINGLE,
+              size: 16,
+            },
+          },
+          spacing: { before: 100, after: 140 },
+        })
+      );
     } else if (/^[-*]\s+/.test(line)) {
       const itemText = line.replace(/^[-*]\s+/, '');
+      const hasAnswerLabel = /^(\*{0,2}(?:Respuesta|Rpta|Solución):\*{0,2})/i.test(itemText);
       children.push(
         new Paragraph({
           bullet: { level: 0 },
           children: parseInlineRuns(itemText),
+          shading: hasAnswerLabel
+            ? {
+                type: ShadingType.CLEAR,
+                fill: 'F1F5F9',
+              }
+            : undefined,
           spacing: { before: 40, after: 60 },
         })
       );
