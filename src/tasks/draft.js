@@ -94,3 +94,82 @@ export async function generateDraft(session, ai, client, task, { instructions = 
 
   return { dir, draftFile: docxPath, docxFile: docxPath, hasNotes: Boolean(notes) };
 }
+
+/**
+ * Elimina el borrador de una tarea y la devuelve al estado 'pendiente'.
+ * Borra el archivo .docx de la carpeta y de entrega/, y limpia la sección generada en README.md.
+ */
+export async function deleteDraft(session, task) {
+  const dir = task.local?.dir;
+  if (dir && fs.existsSync(dir)) {
+    // 1. Eliminar archivo .docx específico si existe
+    if (task.local?.docxFile && fs.existsSync(task.local.docxFile)) {
+      try {
+        fs.unlinkSync(task.local.docxFile);
+      } catch {
+        /* ignorar */
+      }
+    }
+
+    // 2. Eliminar cualquier .docx o borrador.md en la carpeta raíz de la tarea
+    try {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (f.endsWith('.docx') || f.startsWith('borrador.') || f === 'borrador.md') {
+          try {
+            fs.unlinkSync(path.join(dir, f));
+          } catch {
+            /* ignorar */
+          }
+        }
+      }
+    } catch {
+      /* ignorar */
+    }
+
+    // 3. Eliminar archivos de entrega generados
+    const entregaDir = path.join(dir, 'entrega');
+    if (fs.existsSync(entregaDir)) {
+      try {
+        const files = fs.readdirSync(entregaDir);
+        for (const f of files) {
+          if (f.endsWith('.docx') || f === 'texto.md') {
+            try {
+              fs.unlinkSync(path.join(entregaDir, f));
+            } catch {
+              /* ignorar */
+            }
+          }
+        }
+      } catch {
+        /* ignorar */
+      }
+    }
+
+    // 4. Limpiar la sección de explicación del README.md si existe
+    const readmePath = path.join(dir, 'README.md');
+    if (fs.existsSync(readmePath)) {
+      try {
+        const content = fs.readFileSync(readmePath, 'utf8');
+        const cleanContent = content.split('\n---\n## 💡 Explicación')[0].trimEnd() + '\n';
+        fs.writeFileSync(readmePath, cleanContent, 'utf8');
+      } catch {
+        /* ignorar */
+      }
+    }
+  }
+
+  // Actualizar estado local a pendiente
+  task.local = {
+    ...task.local,
+    state: 'pendiente',
+  };
+  delete task.local.docxFile;
+  delete task.local.draftAt;
+  delete task.local.model;
+
+  session.state.tasks[task.id] = task;
+  session.saveState();
+  return true;
+}
+

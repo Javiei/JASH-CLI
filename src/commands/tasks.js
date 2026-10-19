@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { checkbox, confirm } from '@inquirer/prompts';
+import { checkbox, confirm, select, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import Table from 'cli-table3';
@@ -9,7 +9,7 @@ import { openSession } from '../core/session.js';
 import { clientFromSession } from '../moodle/client.js';
 import { aiFromSession } from '../ai/providers.js';
 import { syncTasks, sortedTasks, upcoming, overdueTasks, findTask, isPending } from '../tasks/sync.js';
-import { generateDraft } from '../tasks/draft.js';
+import { generateDraft, deleteDraft } from '../tasks/draft.js';
 import { planSubmission, submitPlan } from '../tasks/submit.js';
 import { openFolder, prepareTaskFolder } from '../tasks/workspace.js';
 import {
@@ -149,6 +149,42 @@ export async function borrador(ids, opts, gopts) {
     return info(opts.semana ? 'Todas las tareas de la semana ya tienen borrador (usa --forzar para rehacerlos).' : 'Nada seleccionado.');
   }
 
+  // Si se solicitó eliminar (--eliminar)
+  if (opts.eliminar) {
+    for (const task of targets) {
+      await deleteDraft(session, task);
+      ok(`Borrador de "${task.name}" eliminado y desmarcado.`);
+    }
+    return;
+  }
+
+  // Si es una tarea que ya tiene borrador y no se forzó por comando, ofrecer menú interactivo
+  if (targets.length === 1 && targets[0].local?.state === 'borrador' && !opts.forzar && !opts.rehacer) {
+    const t = targets[0];
+    const action = await select({
+      message: `La tarea "${t.name}" ya tiene un borrador generado. ¿Qué deseas hacer?`,
+      choices: [
+        { name: '🔄  Rehacer el borrador con IA (agregar indicaciones o nuevo enfoque)', value: 'rehacer' },
+        { name: '🗑️   Eliminar el borrador y volver a marcar la tarea como pendiente', value: 'eliminar' },
+        { name: '↩️   Cancelar', value: 'cancelar' },
+      ],
+    });
+
+    if (action === 'cancelar') return;
+
+    if (action === 'eliminar') {
+      await deleteDraft(session, t);
+      return ok(`Borrador de "${t.name}" eliminado. La tarea vuelve a estar marcada como pendiente.`);
+    }
+
+    if (action === 'rehacer' && !opts.indicaciones) {
+      const extra = await input({
+        message: 'Indicaciones adicionales para rehacerlo (opcional, o presiona Enter para regenerar):',
+      });
+      if (extra.trim()) opts.indicaciones = extra.trim();
+    }
+  }
+
   console.log(chalk.dim(`\nUsando ${ai.label}. Esto puede tardar un poco por tarea…\n`));
   const done = [];
   for (const task of targets) {
@@ -173,6 +209,9 @@ ${chalk.bold('Listo.')} Archivos generados en: ${chalk.underline(session.profile
   1. Abre la carpeta de la materia y revisa el documento ${chalk.cyan('Word (.docx)')} y la explicación en ${chalk.cyan('README.md')}  ${chalk.dim('(jash abrir <id>)')}
   2. Puedes editar el documento Word directamente o colocar tus archivos en la carpeta ${chalk.cyan('entrega/')}
   3. Cuando quieras subirlo a Moodle: ${chalk.cyan('jash entregar <id>')}
+
+${chalk.dim('Tip: Si no te gustó el borrador, puedes rehacerlo con `jash borrador <id> --rehacer` o borrarlo con `jash borrador <id> --eliminar`.')}
+${chalk.dim('Si eliminas el archivo .docx de la carpeta, Jash lo desmarcará automáticamente como pendiente.')}
 `);
   }
 }

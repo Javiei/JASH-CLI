@@ -7,14 +7,15 @@ import { clientFromSession } from '../moodle/client.js';
 import { aiFromSession } from '../ai/providers.js';
 import { chatSystem } from '../ai/prompts.js';
 import { upcoming, overdueTasks, findTask, sortedTasks, isPending } from '../tasks/sync.js';
-import { generateDraft } from '../tasks/draft.js';
+import { generateDraft, deleteDraft } from '../tasks/draft.js';
 import { chatHud, animateLines, streamMarkdown } from '../ui/format.js';
 import { printTasks, runSync } from './tasks.js';
 
 const HELP = `
   ${chalk.cyan('/tareas')}                   muestra la tabla de todas tus tareas pendientes
   ${chalk.cyan('/tarea <id>')}               pone el enunciado de una tarea en contexto
-  ${chalk.cyan('/borrador <id> [texto]')}    genera y guarda el borrador en tu carpeta
+  ${chalk.cyan('/borrador <id> [texto]')}    genera/rehace el borrador en Word (.docx)
+  ${chalk.cyan('/eliminar <id>')}            elimina el borrador y desmarca la tarea
   ${chalk.cyan('/sync')}                     sincroniza las tareas con Moodle
   ${chalk.cyan('/limpiar')}                  reinicia la memoria de la conversación
   ${chalk.cyan('/salir')}                    cierra la sesión
@@ -184,7 +185,28 @@ export async function chat(gopts) {
             }
             break;
           }
+          case 'eliminar': {
+            const t = findTask(session.state, arg);
+            if (!t) {
+              console.log(chalk.red(`  No encontré la tarea ${arg}.`));
+              break;
+            }
+            await deleteDraft(session, t);
+            console.log(chalk.green(`  ✔ Borrador de "${t.name}" eliminado. La tarea vuelve a estar marcada como pendiente.`));
+            break;
+          }
           case 'borrador': {
+            if (arg === 'eliminar' || arg === 'borrar') {
+              const taskId = rest[0];
+              const t = findTask(session.state, taskId);
+              if (!t) {
+                console.log(chalk.red(`  No encontré la tarea ${taskId}.`));
+                break;
+              }
+              await deleteDraft(session, t);
+              console.log(chalk.green(`  ✔ Borrador de "${t.name}" eliminado. La tarea vuelve a estar marcada como pendiente.`));
+              break;
+            }
             const t = findTask(session.state, arg);
             if (!t) {
               console.log(chalk.red(`  No encontré la tarea ${arg}.`));
@@ -195,7 +217,7 @@ export async function chat(gopts) {
               instructions: rest.join(' '),
               onProgress: (m) => (sp.text = `${t.name} · ${chalk.dim(m)}`),
             });
-            sp.succeed(`Borrador guardado en ${chalk.underline(r.draftFile)}`);
+            sp.succeed(`Documento Word (.docx) guardado en ${chalk.underline(r.draftFile)}`);
             break;
           }
           default:

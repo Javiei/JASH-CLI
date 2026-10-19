@@ -64,6 +64,58 @@ test('createDocxBuffer genera un archivo Word válido', async () => {
   assert.ok(buf.length > 1000);
 });
 
+import { deleteDraft } from '../src/tasks/draft.js';
+import { loadState, saveState } from '../src/core/profiles.js';
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs';
+
+test('deleteDraft y reconciliación automática al eliminar archivo de la carpeta', async () => {
+  const tmpDir = path.join(os.tmpdir(), `jash-test-draft-${Date.now()}`);
+  fs.mkdirSync(path.join(tmpDir, 'entrega'), { recursive: true });
+
+  const fakeDocx = path.join(tmpDir, 'tarea.docx');
+  fs.writeFileSync(fakeDocx, 'dummy');
+
+  const task = {
+    id: '999',
+    name: 'Ensayo',
+    course: 'Filosofía',
+    local: { state: 'borrador', dir: tmpDir, docxFile: fakeDocx },
+  };
+
+  const session = {
+    state: { tasks: { 999: task } },
+    saveState() {},
+  };
+
+  // 1. Probar deleteDraft
+  await deleteDraft(session, task);
+  assert.equal(task.local.state, 'pendiente');
+  assert.equal(fs.existsSync(fakeDocx), false);
+
+  // 2. Probar reconciliación automática cuando el usuario borra manualmente el archivo
+  const fakeDocx2 = path.join(tmpDir, 'tarea2.docx');
+  fs.writeFileSync(fakeDocx2, 'dummy 2');
+  const task2 = {
+    id: '1000',
+    name: 'Ensayo 2',
+    course: 'Filosofía',
+    local: { state: 'borrador', dir: tmpDir, docxFile: fakeDocx2 },
+  };
+  saveState('test-user', { tasks: { 1000: task2 } });
+
+  // Si el usuario borra el archivo del disco manualmente
+  fs.unlinkSync(fakeDocx2);
+
+  // loadState debe desmarcarlo automáticamente
+  const reloaded = loadState('test-user');
+  assert.equal(reloaded.tasks['1000'].local.state, 'pendiente');
+
+  // Limpiar
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
 test('isoWeek y safeName', () => {
   assert.deepEqual(isoWeek(new Date(2026, 9, 19)), { year: 2026, week: 43 });
   assert.deepEqual(isoWeek(new Date(2027, 0, 1)), { year: 2026, week: 53 });

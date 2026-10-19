@@ -71,7 +71,39 @@ export function loadSecrets(name) {
 // ---------- Estado (caché de tareas) ----------
 
 export function loadState(name) {
-  return readJson(path.join(profileDir(name), 'state.json'), { tasks: {}, lastSync: null, site: null });
+  const state = readJson(path.join(profileDir(name), 'state.json'), { tasks: {}, lastSync: null, site: null });
+  let changed = false;
+
+  for (const t of Object.values(state.tasks || {})) {
+    if (t.local?.state === 'borrador') {
+      const dir = t.local.dir;
+      let exists = false;
+      if (dir && fs.existsSync(dir)) {
+        if (t.local.docxFile && fs.existsSync(t.local.docxFile)) {
+          exists = true;
+        } else {
+          try {
+            exists = fs.readdirSync(dir).some((f) => f.endsWith('.docx') || f === 'borrador.md');
+          } catch {
+            exists = false;
+          }
+        }
+      }
+      if (!exists) {
+        t.local.state = 'pendiente';
+        delete t.local.docxFile;
+        delete t.local.draftAt;
+        delete t.local.model;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    saveState(name, state);
+  }
+
+  return state;
 }
 
 export function saveState(name, state) {

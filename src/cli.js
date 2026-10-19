@@ -207,6 +207,8 @@ export function buildProgram() {
     .description('genera borradores con IA en la carpeta de cada tarea')
     .option('-s, --semana', 'todas las tareas pendientes de los próximos 7 días')
     .option('-i, --indicaciones <texto>', 'indicaciones extra para la IA (ej. "más corto, en primera persona")')
+    .option('-r, --rehacer', 'rehace borradores que ya existen con IA')
+    .option('-e, --eliminar', 'elimina el borrador y desmarca la tarea volviéndola a dejar pendiente')
     .option('-f, --forzar', 'rehace borradores que ya existen (con --semana)')
     .action((ids, opts) => borrador(ids, opts, g()));
 
