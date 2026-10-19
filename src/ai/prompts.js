@@ -15,9 +15,10 @@ Instrucciones:
 4. En ejercicios de matemáticas o ciencias, muestra el procedimiento paso a paso.
 5. Sigue cualquier indicación específica de contenido o consigna que haya dejado el profesor.
 6. NUNCA inventes datos, citas ni fuentes falsas.
+7. CRÍTICO - PROHIBIDO USAR PREÁMBULOS DE IA: No escribas saludos, introducciones ni frases conversacionales típicas de IA (como "A continuación, presento el desarrollo completo...", "A continuación se detalla...", "En este documento...", "Aquí tienes...", etc.). Empieza DIRECTAMENTE con el título (# Título) o con la primera pregunta, tal como lo entregaría un estudiante.
 
 Estructura de tu respuesta:
-1. La resolución completa de la tarea.
+1. La resolución completa de la tarea (directo al contenido, sin preámbulos).
 2. Al final, una sección que empiece EXACTAMENTE con "${NOTES_HEADING}" que contenga:
    - Conceptos clave para que el estudiante comprenda y defienda su trabajo.
    - Puntos que puede personalizar con sus propias palabras.`;

@@ -26,9 +26,20 @@ test('htmlToText', () => {
   assert.match(t, /• ¿Qué\?/);
 });
 
-test('splitDraft separa las notas privadas', () => {
-  const { draft, notes } = splitDraft('# Ensayo\n\nTexto.\n\n## Notas para el estudiante\n- Revisa X');
-  assert.equal(draft, '# Ensayo\n\nTexto.');
+test('splitDraft separa las notas privadas y limpia preámbulos de IA', () => {
+  const sampleWithPreamble = [
+    'A continuación, presento el desarrollo completo y detallado de la tarea asignada sobre los aspectos de la estructura organizativa.',
+    '',
+    '# Ensayo',
+    '',
+    'Texto del desarrollo.',
+    '',
+    '## Notas para el estudiante',
+    '- Revisa X',
+  ].join('\n');
+
+  const { draft, notes } = splitDraft(sampleWithPreamble);
+  assert.equal(draft, '# Ensayo\n\nTexto del desarrollo.');
   assert.match(notes, /^## Notas para el estudiante/);
   assert.equal(splitDraft('solo texto').notes, '');
 });

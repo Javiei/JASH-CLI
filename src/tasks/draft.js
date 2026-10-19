@@ -4,11 +4,40 @@ import { DRAFT_SYSTEM, NOTES_HEADING, draftUserPrompt } from '../ai/prompts.js';
 import { prepareTaskFolder, readTextAttachments, safeName } from './workspace.js';
 import { createDocxBuffer } from './docx.js';
 
-/** Separa el borrador de la sección de notas privadas para el estudiante. */
+/**
+ * Elimina frases introductorias conversacionales típicas de IA al inicio del texto
+ * (ej: "A continuación presento el desarrollo...", "En este documento...", "Aquí tienes...", etc.).
+ */
+export function cleanAiPreamble(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let startIdx = 0;
+  const isPreamble = (l) =>
+    /^(?:(?:¡?(?:hola|claro(?: que sí)?|por supuesto|entendido|seguro)[!.,]?\s*)?(?:a continuación[,:\s]+(?:presento|se presenta|se detalla|desarrollo|adjunto|encontrará|abordaremos|veremos|te presento|te detallo|doy respuesta|se responden|comparto|procedo)|en este documento[,:\s]+(?:se presenta|presento|abordaremos|se detalla)|aquí (?:tienes|está|presento)|con gusto(?: te presento)?|en el presente trabajo se detalla|estimado|saludos))/i.test(
+      l.trim()
+    );
+
+  while (startIdx < lines.length) {
+    const line = lines[startIdx].trim();
+    if (!line) {
+      startIdx++;
+      continue;
+    }
+    if (isPreamble(line)) {
+      startIdx++;
+      continue;
+    }
+    break;
+  }
+  return lines.slice(startIdx).join('\n').trim();
+}
+
+/** Separa el borrador de la sección de notas privadas para el estudiante, limpiando preámbulos robóticos. */
 export function splitDraft(text) {
   const idx = text.indexOf(NOTES_HEADING);
-  if (idx === -1) return { draft: text.trim(), notes: '' };
-  return { draft: text.slice(0, idx).trim(), notes: text.slice(idx).trim() };
+  const rawDraft = idx === -1 ? text.trim() : text.slice(0, idx).trim();
+  const notes = idx === -1 ? '' : text.slice(idx).trim();
+  return { draft: cleanAiPreamble(rawDraft), notes };
 }
 
 /**

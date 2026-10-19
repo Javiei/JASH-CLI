@@ -315,6 +315,30 @@ function parseTableBlock(tableLines) {
   });
 }
 
+function cleanAiPreamble(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let startIdx = 0;
+  const isPreamble = (l) =>
+    /^(?:(?:¡?(?:hola|claro(?: que sí)?|por supuesto|entendido|seguro)[!.,]?\s*)?(?:a continuación[,:\s]+(?:presento|se presenta|se detalla|desarrollo|adjunto|encontrará|abordaremos|veremos|te presento|te detallo|doy respuesta|se responden|comparto|procedo)|en este documento[,:\s]+(?:se presenta|presento|abordaremos|se detalla)|aquí (?:tienes|está|presento)|con gusto(?: te presento)?|en el presente trabajo se detalla|estimado|saludos))/i.test(
+      l.trim()
+    );
+
+  while (startIdx < lines.length) {
+    const line = lines[startIdx].trim();
+    if (!line) {
+      startIdx++;
+      continue;
+    }
+    if (isPreamble(line)) {
+      startIdx++;
+      continue;
+    }
+    break;
+  }
+  return lines.slice(startIdx).join('\n').trim();
+}
+
 /**
  * Genera un Buffer de documento Word (.docx) con el diseño elegante y profesional
  * correspondiente al formato de referencia (cajas de preguntas con acento cyan, respuestas indentadas y tarjeta de metadatos).
@@ -327,7 +351,8 @@ function parseTableBlock(tableLines) {
  */
 export async function createDocxBuffer({ title = '', course = '', author = '', institution = '', content = '' }) {
   const children = [];
-  const lines = content.split('\n');
+  const cleanContent = cleanAiPreamble(content);
+  const lines = cleanContent.split('\n');
 
   // 1. Encabezado institucional superior
   children.push(
