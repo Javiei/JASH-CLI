@@ -1,8 +1,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { createRequire } from 'node:module';
-import { getConfig, loadState } from './core/profiles.js';
-import { banner } from './ui/format.js';
+import { getConfig, loadState, loadProfile } from './core/profiles.js';
+import { banner, chatHud } from './ui/format.js';
+import { overdueTasks, upcoming } from './tasks/sync.js';
+import { PROVIDERS } from './ai/providers.js';
 import { registro, login, config, perfilLista, perfilUsar, perfilEliminar } from './commands/account.js';
 import { sincronizar, tareas, borrador, abrir, entregar } from './commands/tasks.js';
 import { recordatorios, programar, quitar, printReminders } from './commands/reminders.js';
@@ -24,24 +26,86 @@ export function buildProgram() {
     .addHelpCommand('ayuda [comando]', 'muestra la ayuda de un comando')
     .showSuggestionAfterError();
 
-  // Sin argumentos: banner + resumen rápido y limpio
+  // Sin argumentos: Dashboard inmersivo estilo Claude Code / OpenCode
   program.action(() => {
-    console.log(banner());
-    const active = g().perfil || getConfig().activeProfile;
-    if (!active) {
-      console.log(`  ${chalk.hex('#38bdf8')('›')} Crea tu perfil con: ${chalk.cyan.bold('jash registro')}`);
-      console.log(`  ${chalk.dim('› Ayuda completa: jash --help')}\n`);
-    } else {
-      const state = loadState(active);
-      const site = state.site ? ` · ${state.site.name}` : '';
-      console.log(`  ${chalk.green('●')} Perfil: ${chalk.bold(active)}${chalk.dim(site)}\n`);
-      if (state.lastSync) {
-        printReminders(state, 7);
-      } else {
-        console.log(`  ${chalk.hex('#38bdf8')('›')} Ejecuta ${chalk.cyan.bold('jash sincronizar')} para descargar tus tareas.`);
-      }
-      console.log(`\n  ${chalk.dim('Comandos:')} ${chalk.cyan('jash tareas')} ${chalk.dim('·')} ${chalk.cyan('jash borrador --semana')} ${chalk.dim('·')} ${chalk.cyan('jash chat')} ${chalk.dim('·')} ${chalk.dim('jash --help')}\n`);
+    try {
+      process.stdout.write('\x1b]0;Jash · Asistente Académico\x07');
+    } catch {
+      /* ignorar */
     }
+
+    console.clear();
+    const active = g().perfil || getConfig().activeProfile;
+    const divider = () => chalk.hex('#1e293b')('─'.repeat(Math.min(process.stdout.columns || 75, 75)));
+
+    if (!active) {
+      console.log(
+        chatHud({
+          user: 'Nuevo Usuario',
+          site: 'Sin conectar',
+          model: 'Por configurar',
+          overdueCount: 0,
+          weekCount: 0,
+        })
+      );
+      console.log(divider());
+      console.log(`  ${chalk.hex('#38bdf8').bold('›')} Bienvenido a Jash. Empieza creando tu perfil:`);
+      console.log(`    ${chalk.cyan.bold('jash registro')}\n`);
+      console.log(`  ${chalk.dim('› Ayuda completa de comandos: jash --help')}`);
+      console.log(divider() + '\n');
+      return;
+    }
+
+    const state = loadState(active);
+    const profile = loadProfile(active) || {};
+    const overdue = overdueTasks(state);
+    const week = upcoming(state, 7, { includeUndated: true });
+    const modelLabel = profile.ai ? `${PROVIDERS[profile.ai.provider]?.label || profile.ai.provider} · ${profile.ai.model}` : 'IA';
+
+    console.log(
+      chatHud({
+        user: state.site?.fullname || profile.moodle?.fullname || active,
+        site: state.site?.name || profile.moodle?.sitename || 'Moodle',
+        model: modelLabel,
+        overdueCount: overdue.length,
+        weekCount: week.length,
+      })
+    );
+
+    console.log(divider());
+
+    if (overdue.length) {
+      console.log(chalk.red.bold(`  ⚠ TAREAS VENCIDAS SIN ENTREGAR (${overdue.length}):`));
+      for (const t of overdue.slice(0, 4)) {
+        console.log(`  🔴 ${chalk.red(t.course)} — ${chalk.bold(t.name)} ${chalk.dim(`#${t.id}`)}`);
+      }
+      if (overdue.length > 4) {
+        console.log(chalk.dim(`     … y ${overdue.length - 4} más (ver todas: jash tareas -v)`));
+      }
+      console.log();
+    }
+
+    if (week.length) {
+      console.log(chalk.cyan.bold(`  📅 ENTREGAS PARA ESTA SEMANA (${week.length}):`));
+      for (const t of week.slice(0, 5)) {
+        const draft = t.local?.state === 'borrador' ? chalk.cyan(' [borrador listo]') : '';
+        console.log(`  🟢 ${chalk.bold(t.course)} — ${t.name}${draft} ${chalk.dim(`#${t.id}`)}`);
+      }
+      if (week.length > 5) {
+        console.log(chalk.dim(`     … y ${week.length - 5} más (ver todas: jash tareas -s)`));
+      }
+      console.log();
+    } else if (!overdue.length) {
+      console.log(chalk.green('  ✔ Todo al día. No tienes tareas pendientes para esta semana. 🎉\n'));
+    }
+
+    console.log(divider());
+    console.log(chalk.hex('#38bdf8').bold('  Comandos principales:'));
+    console.log(`  ${chalk.cyan.bold('jash chat')}               ${chalk.dim('asistente conversacional en tiempo real')}`);
+    console.log(`  ${chalk.cyan.bold('jash tareas')}             ${chalk.dim('tabla completa de pendientes (opciones: -s, -v, -a)')}`);
+    console.log(`  ${chalk.cyan.bold('jash borrador --semana')}  ${chalk.dim('generar borradores con IA de toda la semana')}`);
+    console.log(`  ${chalk.cyan.bold('jash sync')}               ${chalk.dim('sincronizar tareas nuevas desde Moodle')}`);
+    console.log(`  ${chalk.dim('jash --help')}            ${chalk.dim('manual completo de opciones y comandos\n')}`);
   });
 
   // ----- Cuenta -----
