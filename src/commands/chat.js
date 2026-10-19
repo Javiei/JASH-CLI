@@ -8,7 +8,7 @@ import { aiFromSession } from '../ai/providers.js';
 import { chatSystem } from '../ai/prompts.js';
 import { upcoming, overdueTasks, findTask, sortedTasks, isPending } from '../tasks/sync.js';
 import { generateDraft } from '../tasks/draft.js';
-import { chatHud } from '../ui/format.js';
+import { chatHud, animateLines, streamMarkdown } from '../ui/format.js';
 import { printTasks, runSync } from './tasks.js';
 
 const HELP = `
@@ -104,14 +104,15 @@ export async function chat(gopts) {
   const overdue = overdueTasks(session.state);
   const weekTasks = upcoming(session.state, 7, { includeUndated: true });
 
-  console.log(
+  await animateLines(
     chatHud({
       user: session.state.site?.fullname || session.profile.moodle?.fullname || session.profile.name,
       site: session.state.site?.name || 'Moodle',
       model: ai.label,
       overdueCount: overdue.length,
       weekCount: weekTasks.length,
-    })
+    }),
+    { delay: 16 }
   );
 
   const divider = () => chalk.hex('#1e293b')('─'.repeat(Math.min(stdout.columns || 75, 75)));
@@ -154,14 +155,15 @@ export async function chat(gopts) {
             history = [];
             focus.length = 0;
             console.clear();
-            console.log(
+            await animateLines(
               chatHud({
                 user: session.state.site?.fullname || session.profile.moodle?.fullname || session.profile.name,
                 site: session.state.site?.name || 'Moodle',
                 model: ai.label,
                 overdueCount: overdueTasks(session.state).length,
                 weekCount: upcoming(session.state, 7, { includeUndated: true }).length,
-              })
+              }),
+              { delay: 14 }
             );
             console.log(divider());
             console.log(chalk.dim('  Memoria reiniciada. Puedes empezar una nueva consulta.'));
@@ -208,21 +210,35 @@ export async function chat(gopts) {
 
     history.push({ role: 'user', content: line });
 
+    const thinkPhrases = [
+      'Jash está pensando…',
+      'Analizando tus tareas académicas…',
+      'Consultando el contexto de Moodle…',
+      'Estructurando la respuesta ideal…',
+    ];
+    let phraseIdx = 0;
     const sp = ora({
-      text: chalk.hex('#94a3b8')('Jash está pensando…'),
+      text: chalk.hex('#94a3b8')(thinkPhrases[0]),
       color: 'cyan',
       spinner: 'dots12',
       discardStdin: false,
     }).start();
 
+    const phraseTimer = setInterval(() => {
+      phraseIdx = (phraseIdx + 1) % thinkPhrases.length;
+      sp.text = chalk.hex('#94a3b8')(thinkPhrases[phraseIdx]);
+    }, 1600);
+
     try {
       const reply = await ai.chat(history.slice(-20), { system: system() });
+      clearInterval(phraseTimer);
       sp.stop();
       history.push({ role: 'assistant', content: reply });
 
       console.log(`\n${chalk.hex('#38bdf8').bold('◈ Jash')}`);
-      console.log(renderMd(reply));
+      await streamMarkdown(renderMd(reply), { delay: 12 });
     } catch (err) {
+      clearInterval(phraseTimer);
       sp.fail(err.message);
       history.pop();
     }

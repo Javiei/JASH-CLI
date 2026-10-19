@@ -1,8 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { createRequire } from 'node:module';
+import { select } from '@inquirer/prompts';
 import { getConfig, loadState, loadProfile } from './core/profiles.js';
-import { banner, chatHud } from './ui/format.js';
+import { banner, chatHud, animateLines } from './ui/format.js';
 import { overdueTasks, upcoming } from './tasks/sync.js';
 import { PROVIDERS } from './ai/providers.js';
 import { registro, login, config, perfilLista, perfilUsar, perfilEliminar } from './commands/account.js';
@@ -53,20 +54,31 @@ export function buildProgram() {
     }
 
     if (!active) {
-      console.log(
+      await animateLines(
         chatHud({
           user: 'Nuevo Usuario',
           site: 'Sin conectar',
           model: 'Por configurar',
           overdueCount: 0,
           weekCount: 0,
-        })
+        }),
+        { delay: 14 }
       );
       console.log(divider());
-      console.log(`  ${chalk.hex('#38bdf8').bold('›')} Bienvenido a Jash. Empieza creando tu perfil:`);
-      console.log(`    ${chalk.cyan.bold('jash registro')}\n`);
-      console.log(`  ${chalk.dim('› Ayuda completa de comandos: jash --help')}`);
-      console.log(divider() + '\n');
+      console.log(`  ${chalk.hex('#38bdf8').bold('›')} Bienvenido a Jash. Tu asistente de tareas escolares.\n`);
+
+      if (process.stdout.isTTY) {
+        const opt = await select({
+          message: chalk.hex('#38bdf8').bold('¿Qué deseas hacer?'),
+          choices: [
+            { name: '✨  Crear mi perfil de estudiante (Moodle + IA)', value: 'registro' },
+            { name: '❓  Ver ayuda completa de comandos', value: 'ayuda' },
+            { name: '🚪  Salir', value: 'salir' },
+          ],
+        });
+        if (opt === 'registro') await registro();
+        else if (opt === 'ayuda') program.help();
+      }
       return;
     }
 
@@ -76,14 +88,15 @@ export function buildProgram() {
     const week = upcoming(state, 7, { includeUndated: true });
     const modelLabel = profile.ai ? `${PROVIDERS[profile.ai.provider]?.label || profile.ai.provider} · ${profile.ai.model}` : 'IA';
 
-    console.log(
+    await animateLines(
       chatHud({
         user: state.site?.fullname || profile.moodle?.fullname || active,
         site: state.site?.name || profile.moodle?.sitename || 'Moodle',
         model: modelLabel,
         overdueCount: overdue.length,
         weekCount: week.length,
-      })
+      }),
+      { delay: 15 }
     );
 
     console.log(divider());
@@ -113,13 +126,52 @@ export function buildProgram() {
       console.log(chalk.green('  ✔ Todo al día. No tienes tareas pendientes para esta semana. 🎉\n'));
     }
 
+    if (!process.stdout.isTTY) {
+      console.log(divider());
+      console.log(chalk.hex('#38bdf8').bold('  Comandos principales:'));
+      console.log(`  ${chalk.cyan.bold('jash chat')}               ${chalk.dim('asistente conversacional en tiempo real')}`);
+      console.log(`  ${chalk.cyan.bold('jash tareas')}             ${chalk.dim('tabla completa de pendientes')}`);
+      return;
+    }
+
     console.log(divider());
-    console.log(chalk.hex('#38bdf8').bold('  Comandos principales:'));
-    console.log(`  ${chalk.cyan.bold('jash chat')}               ${chalk.dim('asistente conversacional en tiempo real')}`);
-    console.log(`  ${chalk.cyan.bold('jash tareas')}             ${chalk.dim('tabla completa de pendientes (opciones: -s, -v, -a)')}`);
-    console.log(`  ${chalk.cyan.bold('jash borrador --semana')}  ${chalk.dim('generar borradores con IA de toda la semana')}`);
-    console.log(`  ${chalk.cyan.bold('jash sync')}               ${chalk.dim('sincronizar tareas nuevas desde Moodle')}`);
-    console.log(`  ${chalk.dim('jash --help')}            ${chalk.dim('manual completo de opciones y comandos\n')}`);
+
+    const choice = await select({
+      message: chalk.hex('#38bdf8').bold('¿Qué deseas hacer hoy?'),
+      choices: [
+        { name: '💬  Iniciar Chat interactivo con Jash', value: 'chat' },
+        { name: `📋  Ver mis tareas (${overdue.length} vencidas · ${week.length} esta semana)`, value: 'tareas' },
+        { name: '✨  Generar borradores con IA de toda la semana', value: 'borrador' },
+        { name: '🔄  Sincronizar tareas nuevas de Moodle', value: 'sync' },
+        { name: '⚡  Comprobar actualizaciones de Jash', value: 'actualizar' },
+        { name: '⚙️   Configuración y perfiles', value: 'config' },
+        { name: '🚪  Salir', value: 'salir' },
+      ],
+    });
+
+    switch (choice) {
+      case 'chat':
+        await chat(g());
+        break;
+      case 'tareas':
+        await tareas({}, g());
+        break;
+      case 'borrador':
+        await borrador([], { semana: true }, g());
+        break;
+      case 'sync':
+        await sincronizar(g());
+        break;
+      case 'actualizar':
+        await updateSelf();
+        break;
+      case 'config':
+        await config(g());
+        break;
+      case 'salir':
+        console.log(chalk.dim('\n  ¡Hasta luego! 👋\n'));
+        break;
+    }
   });
 
   // ----- Cuenta -----

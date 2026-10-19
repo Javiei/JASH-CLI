@@ -124,6 +124,37 @@ export function chatHud({ user = 'Estudiante', site = 'Moodle', model = 'IA', ov
   ].join('\n');
 }
 
+export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Imprime un texto línea por línea con animación suave de entrada. */
+export async function animateLines(lines, { delay = 18 } = {}) {
+  const arr = Array.isArray(lines) ? lines : String(lines).split('\n');
+  if (!process.stdout.isTTY) {
+    console.log(arr.join('\n'));
+    return;
+  }
+  for (const line of arr) {
+    console.log(line);
+    await sleep(delay);
+  }
+}
+
+/** Renderiza markdown con animación de flujo (streaming) línea a línea. */
+export async function streamMarkdown(renderedText, { delay = 14 } = {}) {
+  const lines = renderedText.split('\n');
+  if (!process.stdout.isTTY) {
+    console.log(renderedText);
+    return;
+  }
+  for (const line of lines) {
+    console.log(line);
+    // Micro-pausa ligeramente mayor en párrafos vacíos o títulos para cadencia natural
+    const d = line.trim() === '' ? delay * 2 : delay;
+    await sleep(d);
+  }
+}
+
 export const ok = (msg) => console.log(`${chalk.green('✔')} ${msg}`);
 export const info = (msg) => console.log(`${chalk.cyan('ℹ')} ${msg}`);
 export const warn = (msg) => console.log(`${chalk.yellow('⚠')} ${msg}`);
+
