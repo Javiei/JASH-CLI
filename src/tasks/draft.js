@@ -36,6 +36,7 @@ export async function generateDraft(session, ai, client, task, { instructions = 
     title: task.name,
     course: task.courseName || task.course,
     author: session.state.site?.fullname || session.profile.moodle?.fullname || session.profile.name,
+    institution: session.state.site?.name || session.profile.moodle?.sitename || '',
     content: draft,
   });
 

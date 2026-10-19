@@ -4,6 +4,7 @@ import {
   Paragraph,
   TextRun,
   HeadingLevel,
+  AlignmentType,
   Table,
   TableRow,
   TableCell,
@@ -11,36 +12,29 @@ import {
   BorderStyle,
 } from 'docx';
 
-// Paleta de colores clásica y moderna de Word / Gemini (Tema Office Accent 1)
-const WORD_COLORS = {
-  TITLE: '1F4E79', // Azul profundo formal para título principal
-  H1: '2E75B6', // Azul característico de Word para Encabezado 1
-  H2: '1F4E79', // Azul marino para Encabezado 2
-  H3: '2E75B6', // Azul Word para Encabezado 3
-  H4: '5B9BD5', // Azul celeste suave para Encabezado 4
-  BODY: '262626', // Gris oscuro natural (mucho más agradable que negro puro)
-  MUTED: '595959', // Gris para subtítulos y metadatos
-  TABLE_HEADER_BG: 'D9E8F5', // Fondo azul claro característico de tablas de Word
-  TABLE_HEADER_TEXT: '1F4E79',
-  TABLE_BORDER: 'BDD7EE', // Bordes suaves en tono azul de Word
-  CALLOUT_BG: 'F0F4F8', // Fondo sutil para citas o notas destacadas
-  CALLOUT_BORDER: '2E75B6',
-  DIVIDER: 'BDD7EE',
-  CODE_BG: 'F1F5F9',
-  CODE_TEXT: '0F172A',
+// Paleta de colores oficial del formato UNPHU / Word Visual
+const DOCX_THEME = {
+  NAVY: '1B365D', // Azul institucional / Preguntas / Títulos
+  CYAN: '0284C7', // Cyan eléctrico / Borde de preguntas / Etiqueta 'Respuesta:'
+  MUTED_HEADER: '4A5568', // Subtítulo institucional
+  BODY: '334155', // Texto de respuesta y cuerpo (Slate oscuro)
+  LABEL_DARK: '2D3748', // Texto secundario de metadatos
+  GRAY_SUB: '64748B', // Subtítulo gris de descripción
+  CARD_BG: 'F7FAFC', // Fondo de tarjeta de metadatos
+  QUESTION_BG: 'F1F5F9', // Fondo de tarjeta de pregunta
+  BORDER_CARD: 'CBD5E0', // Borde tarjeta metadatos
+  BORDER_INNER: 'E2E8F0', // Divisor horizontal interno de tarjeta
 };
 
 /**
- * Convierte texto con formato Markdown inline a TextRuns de docx (negritas, cursivas, negrita-cursiva, código).
- * Aplica los colores predeterminados de Word para que se vea fresco, casual y con vida.
+ * Convierte texto con formato Markdown inline a TextRuns de docx (negritas, cursivas, código).
  */
 function parseInlineRuns(text, baseStyle = {}) {
   const defaultFont = baseStyle.font || 'Calibri';
-  const defaultSize = baseStyle.size || 24; // 12pt en medios puntos
-  const defaultColor = baseStyle.color || WORD_COLORS.BODY;
+  const defaultSize = baseStyle.size || 20; // 10pt en medios puntos
+  const defaultColor = baseStyle.color || DOCX_THEME.BODY;
   const runs = [];
 
-  // Regex para negrita-cursiva (***...***), negrita (**...**), cursiva (*...*), código (`...`)
   const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|[^*`]+)/g;
   let match;
 
@@ -86,8 +80,8 @@ function parseInlineRuns(text, baseStyle = {}) {
           text: part.slice(1, -1),
           font: 'Consolas',
           size: Math.max(18, defaultSize - 2),
-          color: WORD_COLORS.CODE_TEXT,
-          shading: { fill: WORD_COLORS.CODE_BG },
+          color: '0F172A',
+          shading: { fill: 'F1F5F9' },
         })
       );
     } else {
@@ -106,6 +100,160 @@ function parseInlineRuns(text, baseStyle = {}) {
   return runs.length ? runs : [new TextRun({ text, font: defaultFont, size: defaultSize, color: defaultColor, ...baseStyle })];
 }
 
+/**
+ * Crea una tarjeta visual de pregunta idéntica a la del documento de referencia.
+ * Caja con fondo F1F5F9 y borde izquierdo cyan 0284C7 de 3pt.
+ */
+function createQuestionBox(text) {
+  const clean = text
+    .replace(/^#{1,4}\s+/, '')
+    .replace(/^\*\*(.*?)\*\*$/, '$1')
+    .trim();
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      left: { style: BorderStyle.SINGLE, size: 24, color: DOCX_THEME.CYAN },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 9360, type: WidthType.DXA },
+            shading: { fill: DOCX_THEME.QUESTION_BG },
+            margins: { top: 100, bottom: 100, left: 160, right: 160 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: parseInlineRuns(clean, {
+                  bold: true,
+                  color: DOCX_THEME.NAVY,
+                  size: 21, // 10.5pt
+                }),
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * Crea el párrafo de respuesta con sangría de 0.2 pulgadas y etiqueta 'Respuesta:' en cyan.
+ */
+function createAnswerParagraph(rawText) {
+  const match = rawText.match(/^(\*{0,2}(?:Respuesta|Solución|Rpta):\*{0,2}\s*)([\s\S]*)$/i);
+  const label = match ? match[1].replace(/\*/g, '').trim() + ' ' : 'Respuesta: ';
+  const content = match ? match[2].trim() : rawText.trim();
+
+  return new Paragraph({
+    spacing: { before: 100, after: 240 },
+    indent: { left: 288 }, // 0.2 pulgadas
+    children: [
+      new TextRun({
+        text: label,
+        bold: true,
+        color: DOCX_THEME.CYAN,
+        size: 20, // 10pt
+        font: 'Calibri',
+      }),
+      ...parseInlineRuns(content, {
+        color: DOCX_THEME.BODY,
+        size: 20, // 10pt
+      }),
+    ],
+  });
+}
+
+/**
+ * Crea la tarjeta superior de metadatos (Estudiante, Materia, Actividad, Fecha).
+ */
+function createMetadataCard({ author = '', course = '', title = '', institution = '' }) {
+  const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 6, color: DOCX_THEME.BORDER_CARD },
+      bottom: { style: BorderStyle.SINGLE, size: 6, color: DOCX_THEME.BORDER_CARD },
+      left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: DOCX_THEME.BORDER_INNER },
+      insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 4680, type: WidthType.DXA },
+            shading: { fill: DOCX_THEME.CARD_BG },
+            margins: { top: 100, bottom: 100, left: 160, right: 160 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({ text: 'Estudiante: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
+                  new TextRun({ text: author || 'Estudiante', color: DOCX_THEME.LABEL_DARK, size: 19, font: 'Calibri' }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 4680, type: WidthType.DXA },
+            shading: { fill: DOCX_THEME.CARD_BG },
+            margins: { top: 100, bottom: 100, left: 160, right: 160 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({ text: 'Materia: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
+                  new TextRun({ text: course || 'General', color: DOCX_THEME.LABEL_DARK, size: 19, font: 'Calibri' }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 4680, type: WidthType.DXA },
+            shading: { fill: DOCX_THEME.CARD_BG },
+            margins: { top: 100, bottom: 100, left: 160, right: 160 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({ text: 'Actividad: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
+                  new TextRun({ text: title || 'Tarea', color: DOCX_THEME.LABEL_DARK, size: 19, font: 'Calibri' }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 4680, type: WidthType.DXA },
+            shading: { fill: DOCX_THEME.CARD_BG },
+            margins: { top: 100, bottom: 100, left: 160, right: 160 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({ text: 'Fecha: ', bold: true, color: DOCX_THEME.NAVY, size: 19, font: 'Calibri' }),
+                  new TextRun({ text: fecha, color: DOCX_THEME.LABEL_DARK, size: 19, font: 'Calibri' }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 const isTableRow = (line) => {
   const t = line.trim();
   return t.startsWith('|') && t.endsWith('|') && t.includes('|');
@@ -114,7 +262,7 @@ const isTableRow = (line) => {
 const isTableDivider = (line) => /^\|(\s*:?-+:?\s*\|)+$/.test(line.trim());
 
 /**
- * Convierte un bloque de líneas de tabla Markdown en una Table nativa de Word con el estilo por defecto de Word (azul claro).
+ * Convierte un bloque de líneas de tabla Markdown en una Table nativa de Word.
  */
 function parseTableBlock(tableLines) {
   const rows = [];
@@ -135,17 +283,18 @@ function parseTableBlock(tableLines) {
           new Paragraph({
             children: parseInlineRuns(cellText, {
               bold: isHeader,
-              color: isHeader ? WORD_COLORS.TABLE_HEADER_TEXT : WORD_COLORS.BODY,
+              color: isHeader ? DOCX_THEME.NAVY : DOCX_THEME.BODY,
+              size: 19,
             }),
             spacing: { before: 80, after: 80 },
           }),
         ],
-        shading: isHeader ? { fill: WORD_COLORS.TABLE_HEADER_BG } : undefined,
+        shading: isHeader ? { fill: DOCX_THEME.QUESTION_BG } : undefined,
         borders: {
-          top: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
-          bottom: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
-          left: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
-          right: { color: WORD_COLORS.TABLE_BORDER, size: 4, value: BorderStyle.SINGLE },
+          top: { color: DOCX_THEME.BORDER_CARD, size: 4, value: BorderStyle.SINGLE },
+          bottom: { color: DOCX_THEME.BORDER_CARD, size: 4, value: BorderStyle.SINGLE },
+          left: { color: DOCX_THEME.BORDER_CARD, size: 4, value: BorderStyle.SINGLE },
+          right: { color: DOCX_THEME.BORDER_CARD, size: 4, value: BorderStyle.SINGLE },
         },
         margins: {
           top: 100,
@@ -167,63 +316,85 @@ function parseTableBlock(tableLines) {
 }
 
 /**
- * Genera un Buffer de documento Word (.docx) a partir de contenido en Markdown.
- * Utiliza el formato casual, visual y bonito por defecto de Word / Gemini:
- * Títulos con los clásicos tonos azules de Word, tablas celestes impecables y tipografía agradable.
+ * Genera un Buffer de documento Word (.docx) con el diseño elegante y profesional
+ * correspondiente al formato de referencia (cajas de preguntas con acento cyan, respuestas indentadas y tarjeta de metadatos).
  * @param {object} opts
  * @param {string} opts.title Título de la tarea
  * @param {string} [opts.course] Materia
  * @param {string} [opts.author] Nombre del estudiante
+ * @param {string} [opts.institution] Nombre de la institución o centro
  * @param {string} opts.content Contenido del borrador en Markdown
  */
-export async function createDocxBuffer({ title = '', course = '', author = '', content = '' }) {
+export async function createDocxBuffer({ title = '', course = '', author = '', institution = '', content = '' }) {
   const children = [];
   const lines = content.split('\n');
 
-  // Si la IA no empezó con un título (# Título), colocamos el título con el azul característico de Word
-  const startsWithHeading = lines.some((l) => l.trim().startsWith('# '));
-  if (!startsWithHeading && title) {
-    children.push(
-      new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        children: [
-          new TextRun({
-            text: title,
-            bold: true,
-            font: 'Calibri',
-            size: 36, // 18pt
-            color: WORD_COLORS.TITLE,
-          }),
-        ],
-        spacing: { before: 0, after: 120 },
-      })
-    );
+  // 1. Encabezado institucional superior
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 60 },
+      children: [
+        new TextRun({
+          text: institution || course || 'Colegios Preuniversitarios (Moodle)',
+          bold: true,
+          color: DOCX_THEME.NAVY,
+          size: 26, // 13pt
+          font: 'Calibri',
+        }),
+      ],
+    })
+  );
 
-    if (course || author) {
-      const meta = [course, author].filter(Boolean).join('  ·  ');
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: meta,
-              italics: true,
-              font: 'Calibri',
-              size: 22, // 11pt
-              color: WORD_COLORS.MUTED,
-            }),
-          ],
-          spacing: { after: 240 },
-        })
-      );
-    }
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 280 },
+      children: [
+        new TextRun({
+          text: course ? `${course} • Actividad Académica` : 'Actividad Académica',
+          color: DOCX_THEME.MUTED_HEADER,
+          size: 22, // 11pt
+          font: 'Calibri',
+        }),
+      ],
+    })
+  );
+
+  // 2. Tarjeta de Metadatos (Estudiante, Materia, Actividad, Fecha)
+  children.push(createMetadataCard({ author, course, title, institution }));
+  children.push(new Paragraph({ spacing: { after: 160 } }));
+
+  // 3. Título de la tarea
+  // Si la primera línea de contenido es un `# Título`, usamos ese; si no, usamos `title`
+  let startIdx = 0;
+  let docTitle = title;
+  if (lines.length > 0 && lines[0].trim().startsWith('# ')) {
+    docTitle = lines[0].trim().slice(2).trim();
+    startIdx = 1;
   }
 
-  let i = 0;
+  children.push(
+    new Paragraph({
+      spacing: { before: 120, after: 140 },
+      children: [
+        new TextRun({
+          text: docTitle,
+          bold: true,
+          color: DOCX_THEME.NAVY,
+          size: 32, // 16pt
+          font: 'Calibri',
+        }),
+      ],
+    })
+  );
+
+  // 4. Procesar el resto del contenido
+  let i = startIdx;
   while (i < lines.length) {
     const rawLine = lines[i];
     const line = rawLine.trim();
 
-    // Líneas vacías -> espaciado de párrafo
     if (!line) {
       i++;
       continue;
@@ -237,7 +408,7 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
         codeLines.push(lines[i]);
         i++;
       }
-      if (i < lines.length) i++; // saltar el ``` de cierre
+      if (i < lines.length) i++;
 
       for (const cl of codeLines) {
         children.push(
@@ -246,11 +417,11 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
               new TextRun({
                 text: cl || ' ',
                 font: 'Consolas',
-                size: 20, // 10pt
-                color: WORD_COLORS.CODE_TEXT,
+                size: 19,
+                color: '0F172A',
               }),
             ],
-            shading: { fill: WORD_COLORS.CODE_BG },
+            shading: { fill: 'F1F5F9' },
             spacing: { before: 20, after: 20, line: 240 },
           })
         );
@@ -275,33 +446,37 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
         new Paragraph({
           border: {
             bottom: {
-              color: WORD_COLORS.DIVIDER,
+              color: DOCX_THEME.BORDER_CARD,
               space: 1,
               value: BorderStyle.SINGLE,
-              size: 8,
+              size: 6,
             },
           },
-          spacing: { before: 180, after: 180 },
+          spacing: { before: 160, after: 160 },
         })
       );
       i++;
       continue;
     }
 
-    // Títulos y subtítulos con la paleta de colores de Word
-    if (line.startsWith('# ')) {
-      children.push(
-        new Paragraph({
-          heading: HeadingLevel.HEADING_1,
-          children: parseInlineRuns(line.slice(2).trim(), { size: 32, bold: true, color: WORD_COLORS.H1 }),
-          spacing: { before: 280, after: 120 },
-        })
-      );
+    // Detectar si es una pregunta (ej: "1. ¿...", "2) ...", "**1. ...**", "### 1. ...")
+    const isQuestion =
+      /^(\d+[\.\)]\s+|\*{0,2}(?:Pregunta|Problema|Ejercicio)\s*\d*:?\*{0,2}\s+|#{1,4}\s+\d+[\.\)])/i.test(line);
+
+    // Detectar si es una respuesta (ej: "Respuesta:", "**Respuesta:**", "Solución:")
+    const isAnswer = /^(\*{0,2}(?:Respuesta|Solución|Rpta):\*{0,2})/i.test(line);
+
+    if (isQuestion) {
+      // Tarjeta de pregunta con acento cyan
+      children.push(createQuestionBox(line));
+    } else if (isAnswer) {
+      // Párrafo de respuesta con sangría y 'Respuesta:' en cyan
+      children.push(createAnswerParagraph(line));
     } else if (line.startsWith('## ')) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          children: parseInlineRuns(line.slice(3).trim(), { size: 26, bold: true, color: WORD_COLORS.H2 }),
+          children: parseInlineRuns(line.slice(3).trim(), { size: 26, bold: true, color: DOCX_THEME.NAVY }),
           spacing: { before: 240, after: 100 },
         })
       );
@@ -309,34 +484,8 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_3,
-          children: parseInlineRuns(line.slice(4).trim(), { size: 24, bold: true, color: WORD_COLORS.H3 }),
+          children: parseInlineRuns(line.slice(4).trim(), { size: 22, bold: true, color: DOCX_THEME.CYAN }),
           spacing: { before: 200, after: 80 },
-        })
-      );
-    } else if (line.startsWith('#### ')) {
-      children.push(
-        new Paragraph({
-          heading: HeadingLevel.HEADING_4,
-          children: parseInlineRuns(line.slice(5).trim(), { size: 22, bold: true, color: WORD_COLORS.H4 }),
-          spacing: { before: 160, after: 60 },
-        })
-      );
-    } else if (line.startsWith('> ')) {
-      // Citas o notas destacadas estilo Word (fondo celeste tenue y borde izquierdo azul)
-      children.push(
-        new Paragraph({
-          children: parseInlineRuns(line.slice(2).trim(), { italics: true, color: WORD_COLORS.H2 }),
-          shading: { fill: WORD_COLORS.CALLOUT_BG },
-          indent: { left: 480 },
-          border: {
-            left: {
-              color: WORD_COLORS.CALLOUT_BORDER,
-              space: 14,
-              value: BorderStyle.SINGLE,
-              size: 16,
-            },
-          },
-          spacing: { before: 100, after: 140, line: 276 },
         })
       );
     } else if (/^[-*+]\s+/.test(line)) {
@@ -344,23 +493,15 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
       children.push(
         new Paragraph({
           bullet: { level: 0 },
-          children: parseInlineRuns(line.replace(/^[-*+]\s+/, '')),
-          spacing: { before: 40, after: 60, line: 276 },
-        })
-      );
-    } else if (/^\d+[.)]\s+/.test(line)) {
-      // Lista numerada
-      children.push(
-        new Paragraph({
-          children: parseInlineRuns(line),
+          children: parseInlineRuns(line.replace(/^[-*+]\s+/, ''), { size: 20, color: DOCX_THEME.BODY }),
           spacing: { before: 40, after: 60, line: 276 },
         })
       );
     } else {
-      // Párrafo estándar en gris natural de Word
+      // Párrafo normal
       children.push(
         new Paragraph({
-          children: parseInlineRuns(line),
+          children: parseInlineRuns(line, { size: 20, color: DOCX_THEME.BODY }),
           spacing: { before: 60, after: 140, line: 276 },
         })
       );
@@ -375,8 +516,8 @@ export async function createDocxBuffer({ title = '', course = '', author = '', c
         document: {
           run: {
             font: 'Calibri',
-            size: 24, // 12pt
-            color: WORD_COLORS.BODY,
+            size: 20, // 10pt
+            color: DOCX_THEME.BODY,
           },
           paragraph: {
             spacing: {
