@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { createRequire } from 'node:module';
 import { select } from '@inquirer/prompts';
 import { getConfig, loadState, loadProfile } from './core/profiles.js';
-import { banner, chatHud, animateLines } from './ui/format.js';
+import { banner, chatHud, animateLines, mascotArt } from './ui/format.js';
 import { overdueTasks, upcoming } from './tasks/sync.js';
 import { PROVIDERS } from './ai/providers.js';
 import { registro, login, config, perfilLista, perfilUsar, perfilEliminar } from './commands/account.js';
@@ -145,6 +145,7 @@ export function buildProgram() {
         { name: '📤  Subir tareas a Moodle (Enviar borradores listos a la plataforma)', value: 'subir' },
         { name: '✨  Generar borradores con IA solo de esta semana', value: 'borrador' },
         { name: '🔄  Sincronizar tareas nuevas de Moodle', value: 'sync' },
+        { name: '🌸  Ver mascota de Jash (Dot Art)', value: 'mascota' },
         { name: '⚡  Comprobar actualizaciones de Jash', value: 'actualizar' },
         { name: '⚙️   Configuración y perfiles', value: 'config' },
         { name: '🚪  Salir', value: 'salir' },
@@ -169,6 +170,9 @@ export function buildProgram() {
         break;
       case 'sync':
         await sincronizar(g());
+        break;
+      case 'mascota':
+        await animateLines(mascotArt(), { delay: 14 });
         break;
       case 'actualizar':
         await updateSelf();

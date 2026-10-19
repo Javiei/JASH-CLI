@@ -8,7 +8,7 @@ import { aiFromSession } from '../ai/providers.js';
 import { chatSystem } from '../ai/prompts.js';
 import { upcoming, overdueTasks, findTask, sortedTasks, isPending } from '../tasks/sync.js';
 import { generateDraft, deleteDraft } from '../tasks/draft.js';
-import { chatHud, animateLines, streamMarkdown } from '../ui/format.js';
+import { chatHud, animateLines, streamMarkdown, mascotArt } from '../ui/format.js';
 import { printTasks, runSync, ponerseAlDia, subirBorradores } from './tasks.js';
 
 const HELP = `
@@ -18,6 +18,7 @@ const HELP = `
   ${chalk.cyan('/tarea <id>')}               pone el enunciado de una tarea en contexto
   ${chalk.cyan('/borrador <id> [texto]')}    genera/rehace el borrador en Word (.docx)
   ${chalk.cyan('/eliminar <id>')}            elimina el borrador y desmarca la tarea
+  ${chalk.cyan('/mascota')}                  muestra el dot art de la mascota de Jash
   ${chalk.cyan('/sync')}                     sincroniza las tareas con Moodle
   ${chalk.cyan('/limpiar')}                  reinicia la memoria de la conversación
   ${chalk.cyan('/salir')}                    cierra la sesión
@@ -199,6 +200,9 @@ export async function chat(gopts) {
             }
             break;
           }
+          case 'mascota':
+            await animateLines(mascotArt(), { delay: 10 });
+            break;
           case 'eliminar': {
             const t = findTask(session.state, arg);
             if (!t) {

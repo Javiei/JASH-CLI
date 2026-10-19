@@ -25,17 +25,15 @@ Además, cuenta con un servidor **MCP (Model Context Protocol)** integrado para 
   - **Anthropic Claude** (claude-sonnet-4-5, etc.)
   - **Google Gemini** (gemini-2.5-flash, gemini-1.5-pro, etc.)
   - **Ollama** (modelos locales como llama3, mistral, deepseek; 100% privado y sin costo)
-- 📁 **Organización semanal en carpetas:** Organiza automáticamente tus tareas en carpetas limpias:
+- 📁 **Organización directa por Materias:** Organiza automáticamente tus tareas en carpetas limpias y ordenadas:
   ```text
   Documentos/Jash/<perfil>/
-  └── Semana 2026-S43/
-      └── Historia/
-          └── Causas de la Revolución/
-              ├── enunciado.md        (enunciado oficial de Moodle)
-              ├── adjuntos/           (archivos descargados del profesor)
-              ├── borrador.md         (resolución propuesta por la IA)
-              ├── notas.md            (supuestos, conceptos clave y puntos a revisar)
-              └── entrega/            (archivos finales que tú decides subir)
+  └── Historia/
+      └── Causas de la Revolución/
+          ├── Causas de la Revolución.docx  (documento Word listo con respuestas resaltadas)
+          ├── README.md                     (explicación detallada de la tarea y notas)
+          ├── adjuntos/                     (archivos descargados del profesor)
+          └── entrega/                      (archivos listos que se subirán a Moodle)
   ```
 - 👁️ **Aprobación antes de subir:** La IA redacta el borrador y notas de estudio, pero **nada se sube sin tu confirmación explícita**. Jash te muestra una vista previa detallada de los archivos o texto en línea antes del envío.
 - 🔔 **Recordatorios y Notificaciones nativas:** Alertas visuales y notificaciones de escritorio programables para avisarte de entregas próximas.
@@ -228,6 +226,35 @@ Jash cuenta con un sistema inteligente de actualización directa desde GitHub:
   ```bash
   jash actualizar --forzar
   ```
+
+---
+
+## 🌸 Mascota de Jash
+
+```text
+⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀
+⠀⠀⠀⠀⠐⡢⢍⢢⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⣿⣿⠀
+⠀⠀⠀⠀⠀⠡⢌⠒⢬⡘⢄⠀⠀⠀⢀⣀⣠⣤⣄⣄⡀⢀⣀⣤⣤⣄⣀⣠⢤⢺⡱⢋⣿⠁⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢈⡈⢦⡹⣜⣾⣳⣿⢿⣿⣿⢿⡿⣿⣿⣿⣿⣿⢯⣟⠿⡽⣷⢿⣼⣁⠃⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢈⣽⣳⠿⠿⠿⣟⣿⣯⢿⡿⣿⡻⢯⣿⣾⣿⢿⣻⡌⢳⡱⢊⣻⣿⣯⢿⣄⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢀⡾⡅⠁⠀⠀⠀⠉⠙⢯⣿⣿⣻⣟⣿⣟⣯⣿⡗⣮⠱⣇⣏⠟⠀⠀⠀⠀⢹⡄⠀
+⠀⠀⠀⠀⠀⠀⣨⣿⠁⠀⠀⠃⠀⠀⠀⠈⢳⣿⣿⣹⣿⣿⣿⣧⣛⢶⡩⢷⠀⠀⠂⠀⠀⠀⠀⠈⡇
+⠀⠀⠀⠀⠀⢀⣿⡏⠀⠀⠀⠀⠀⠀⠀⠰⢀⡆⢿⣹⢿⣹⣷⢿⣹⡏⣿⡎⡁⠀⠀⠀⠀⠀⠀⠀⣼
+⠀⠀⠀⠀⠀⣾⣯⣷⣆⣄⣀⣀⣀⣠⣤⣶⣏⡴⣟⣯⣿⣿⣾⣿⣿⣽⣧⡿⣑⡒⣦⣤⣀⣀⣩⡝⡀
+⠀⠀⠀⠀⢠⣟⣟⣿⣿⣿⣿⣿⢿⣿⣿⣻⣽⣻⡵⣿⣾⣿⣟⣾⢯⣟⣯⣽⢳⡝⣬⢻⣟⡿⣏⠷⡁
+⠀⠀⠀⠀⢠⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣟⢮⡳⡝⣎⠏⡙⠊⠍⠉⠈⠁⠻⣼⢲⣍⠾⡁
+⠀⠀⠀⠀⠈⣿⣷⣿⣾⣿⣿⣿⣿⣽⣿⣿⣿⣿⣿⠙⠇⠐⠈⠀⠀⠁⠀⠀⠀⠀⠀⠀⣽⡳⣬⠛⠄
+⠀⠀⠀⠀⠀⣿⣾⣿⣿⣿⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢾⡳⣍⡻⡀
+⠀⠀⠀⠀⠀⣿⣾⣻⢿⣯⣿⣿⣿⣿⣿⡿⣿⣿⠽⣏⠿⣩⠄⠀⠀⠀⠀⠀⠀⠀⠀⡐⠫⠵⢭⠳⠥
+⠀⠀⠀⠀⣴⣿⣿⣻⣿⢿⡿⣿⣵⣫⠞⣭⠛⠍⡌⠙⠌⠤⠉⠆⠀⠀⠀⠀⠀⠀⠐⠀⠡⠀⠈⠁⠆
+⠀⠀⢠⣾⣿⣿⢿⣿⣞⣯⡿⣶⢣⠏⡚⠄⠣⠘⠄⠉⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⠀
+⠀⢐⣿⡿⣿⣟⣿⣾⢿⣿⣽⡷⣯⣳⡁⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⢀⡾⣿⣽⣿⣻⣯⣿⣿⣿⢿⣽⢷⣣⢿⡜⡦⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⢨⡿⣽⣟⣾⣿⣻⣽⣻⢾⣿⡾⢯⡽⢮⡹⣰⢃⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⢰⣟⣯⣟⣯⣷⣟⣳⣝⣫⢝⡹⢣⠝⡆⠇⢁⠊⡐⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+```
+
+Puedes ver a la mascota en la terminal seleccionando `🌸 Ver mascota de Jash` en el menú principal o escribiendo `/mascota` dentro de `jash chat`.
 
 ---
 
