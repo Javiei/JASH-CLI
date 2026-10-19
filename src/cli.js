@@ -10,6 +10,7 @@ import { sincronizar, tareas, borrador, abrir, entregar } from './commands/tasks
 import { recordatorios, programar, quitar, printReminders } from './commands/reminders.js';
 import { chat } from './commands/chat.js';
 import { runMcpServer } from './mcp/server.js';
+import { checkForUpdate, updateSelf, autoUpdateIfAvailable } from './system/updater.js';
 
 const pkg = createRequire(import.meta.url)('../package.json');
 
@@ -27,7 +28,7 @@ export function buildProgram() {
     .showSuggestionAfterError();
 
   // Sin argumentos: Dashboard inmersivo estilo Claude Code / OpenCode
-  program.action(() => {
+  program.action(async () => {
     try {
       process.stdout.write('\x1b]0;Jash · Asistente Académico\x07');
     } catch {
@@ -37,6 +38,19 @@ export function buildProgram() {
     console.clear();
     const active = g().perfil || getConfig().activeProfile;
     const divider = () => chalk.hex('#1e293b')('─'.repeat(Math.min(process.stdout.columns || 75, 75)));
+
+    // Comprobación y auto-actualización si hay una nueva versión en GitHub
+    const update = await checkForUpdate();
+    if (update.hasUpdate) {
+      console.log(
+        chalk.hex('#38bdf8')(
+          `  ⚡ ¡Nueva versión de Jash detectada! (${chalk.dim(update.current)} → ${chalk.green.bold('v' + update.latest)})`
+        )
+      );
+      console.log(chalk.dim('  🔄 Actualizando automáticamente a la última versión…\n'));
+      const ok = await updateSelf();
+      if (ok) return;
+    }
 
     if (!active) {
       console.log(
@@ -179,6 +193,30 @@ export function buildProgram() {
     .command('mcp')
     .description('inicia el servidor MCP (Model Context Protocol) por stdio para Claude Desktop, Antigravity, etc.')
     .action(() => runMcpServer(g()));
+
+  // ----- Actualizar -----
+  program
+    .command('actualizar')
+    .alias('update')
+    .description('busca e instala la última versión de Jash desde GitHub')
+    .option('-f, --forzar', 'forzar reinstalación aunque ya esté en la última versión')
+    .action(async (opts) => {
+      if (opts.forzar) {
+        await updateSelf();
+        return;
+      }
+      const update = await checkForUpdate({ force: true });
+      if (!update.hasUpdate) {
+        console.log(chalk.green(`\n✔ Ya tienes la última versión instalada (v${update.current}).\n`));
+        return;
+      }
+      console.log(
+        chalk.hex('#38bdf8')(
+          `\n⚡ Nueva versión disponible: v${update.current} → ${chalk.green.bold('v' + update.latest)}`
+        )
+      );
+      await updateSelf();
+    });
 
   return program;
 }

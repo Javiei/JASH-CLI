@@ -200,6 +200,22 @@ jash perfil eliminar demo
 
 ---
 
+## 🔄 Actualizaciones Automáticas
+
+Jash cuenta con un sistema inteligente de actualización directa desde GitHub:
+
+- **Detección automática**: Cada vez que abres `jash`, verifica en segundo plano si hay una nueva versión publicada en GitHub y la instala automáticamente para que siempre tengas las últimas novedades y correcciones.
+- **Actualizar manualmente**:
+  ```bash
+  jash actualizar
+  ```
+  O forzar una reinstalación limpia:
+  ```bash
+  jash actualizar --forzar
+  ```
+
+---
+
 ## 🧪 Pruebas Automatizadas
 
 El proyecto incluye tests unitarios y pruebas de integración:
@@ -207,3 +223,4 @@ El proyecto incluye tests unitarios y pruebas de integración:
 ```bash
 npm test
 ```
+
