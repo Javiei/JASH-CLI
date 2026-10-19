@@ -8,7 +8,7 @@ import { JashError } from '../core/errors.js';
 import { openSession } from '../core/session.js';
 import { clientFromSession } from '../moodle/client.js';
 import { aiFromSession } from '../ai/providers.js';
-import { syncTasks, sortedTasks, upcoming, overdueTasks, findTask, isPending } from '../tasks/sync.js';
+import { syncTasks, sortedTasks, upcoming, overdueTasks, activePendingTasks, findTask, isPending } from '../tasks/sync.js';
 import { generateDraft, deleteDraft } from '../tasks/draft.js';
 import { planSubmission, submitPlan } from '../tasks/submit.js';
 import { openFolder, prepareTaskFolder } from '../tasks/workspace.js';
@@ -296,3 +296,107 @@ ${chalk.bold.hex('#38bdf8')('Vista previa de la entrega')}
   }
   console.log(`  Compruébalo aquí: ${chalk.underline(task.url)}`);
 }
+
+/**
+ * Genera borradores con IA para TODAS las tareas pendientes (vencidas + próximas) que no tengan borrador aún.
+ */
+export async function ponerseAlDia(opts = {}, gopts = {}) {
+  const session = await openSession({ profileName: gopts.perfil });
+  const client = clientFromSession(session);
+  const ai = aiFromSession(session);
+  await ensureFresh(session, client);
+
+  // Todas las tareas pendientes sin borrador (vencidas + próximas de la semana + sin fecha)
+  const pending = activePendingTasks(session.state).filter((t) => opts.forzar || t.local?.state !== 'borrador');
+
+  if (!pending.length) {
+    return ok('🎉 ¡Ya estás al día! Todas tus tareas pendientes ya tienen su borrador en Word (.docx).');
+  }
+
+  console.log(
+    chalk.cyan.bold(`\n🚀 Poniéndose al día: Se generarán borradores para ${pending.length} tarea(s) pendiente(s)…\n`)
+  );
+
+  const done = [];
+  for (const task of pending) {
+    const sp = ora({ text: `${task.course} — ${task.name}`, color: 'magenta', prefixText: chalk.dim(`[${task.id}]`) }).start();
+    try {
+      const r = await generateDraft(session, ai, client, task, {
+        instructions: opts.indicaciones,
+        onProgress: (t) => (sp.text = `${task.name} · ${chalk.dim(t)}`),
+      });
+      sp.succeed(`${task.name} ${chalk.dim('→')} ${chalk.underline(path.relative(session.profile.workspaceDir, r.dir))}`);
+      done.push(task);
+    } catch (err) {
+      sp.fail(`${task.name}: ${err.message}`);
+    }
+  }
+
+  if (done.length) {
+    console.log(`
+${chalk.green.bold('🎉 ¡Listo! Se generaron ' + done.length + ' borradores en Word (.docx).')}
+${chalk.dim('Ubicación:')} ${chalk.underline(session.profile.workspaceDir)}
+
+${chalk.cyan('Siguiente paso sugerido:')}
+  Puedes subir todos estos borradores directamente a Moodle con: ${chalk.cyan.bold('jash subir')}
+`);
+  }
+}
+
+/**
+ * Sube todos los borradores listos directamente a la plataforma Moodle.
+ */
+export async function subirBorradores(opts = {}, gopts = {}) {
+  const session = await openSession({ profileName: gopts.perfil });
+  const client = clientFromSession(session);
+
+  // Buscar todas las tareas que tienen estado 'borrador' y están pendientes
+  const readyTasks = sortedTasks(session.state).filter((t) => t.local?.state === 'borrador' && isPending(t));
+
+  if (!readyTasks.length) {
+    return info('No tienes tareas con borrador listo para subir. Genera uno con "Ponerse al día" o `jash borrador`.');
+  }
+
+  console.log(chalk.bold.hex('#38bdf8')(`\n📤 Tareas con borrador listo para subir a Moodle (${readyTasks.length}):\n`));
+
+  const validPlans = [];
+  for (const t of readyTasks) {
+    try {
+      const plan = planSubmission(t);
+      validPlans.push({ task: t, plan });
+      const fileNames = plan.files.map((f) => f.name).join(', ') || 'Texto en línea';
+      console.log(`  📎 ${chalk.bold(t.course)} — ${t.name} ${chalk.dim(`(${fileNames})`)}`);
+    } catch (err) {
+      console.log(`  ⚠ ${chalk.yellow(t.name)}: ${chalk.dim(err.message)}`);
+    }
+  }
+
+  if (!validPlans.length) {
+    return warn('Ninguna tarea tiene archivos válidos en su carpeta entrega/ para ser enviada.');
+  }
+
+  console.log();
+  const approved = await confirm({
+    message: `¿Deseas subir estos ${validPlans.length} borrador(es) directamente a Moodle?`,
+    default: true,
+  });
+
+  if (!approved) return info('Operación cancelada. No se subió nada.');
+
+  console.log(chalk.dim('\nSubiendo tareas a Moodle…\n'));
+  let count = 0;
+
+  for (const { task, plan } of validPlans) {
+    const sp = ora({ text: `${task.name}`, color: 'cyan', prefixText: chalk.dim(`[${task.id}]`) }).start();
+    try {
+      await submitPlan(session, client, task, plan, { final: Boolean(opts.final), onProgress: (t) => (sp.text = t) });
+      sp.succeed(`${task.name} → Guardada en Moodle con éxito`);
+      count++;
+    } catch (err) {
+      sp.fail(`${task.name} → Falló: ${err.message}`);
+    }
+  }
+
+  console.log(`\n${chalk.green.bold(`✔ ¡${count} de ${validPlans.length} tarea(s) subida(s) exitosamente a Moodle!`)}\n`);
+}
+

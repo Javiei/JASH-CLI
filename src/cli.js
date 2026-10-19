@@ -7,7 +7,7 @@ import { banner, chatHud, animateLines } from './ui/format.js';
 import { overdueTasks, upcoming } from './tasks/sync.js';
 import { PROVIDERS } from './ai/providers.js';
 import { registro, login, config, perfilLista, perfilUsar, perfilEliminar } from './commands/account.js';
-import { sincronizar, tareas, borrador, abrir, entregar } from './commands/tasks.js';
+import { sincronizar, tareas, borrador, abrir, entregar, ponerseAlDia, subirBorradores } from './commands/tasks.js';
 import { recordatorios, programar, quitar, printReminders } from './commands/reminders.js';
 import { chat } from './commands/chat.js';
 import { runMcpServer } from './mcp/server.js';
@@ -141,7 +141,9 @@ export function buildProgram() {
       choices: [
         { name: '💬  Iniciar Chat interactivo con Jash', value: 'chat' },
         { name: `📋  Ver mis tareas (${overdue.length} vencidas · ${week.length} esta semana)`, value: 'tareas' },
-        { name: '✨  Generar borradores con IA de toda la semana', value: 'borrador' },
+        { name: '🚀  Ponerse al día (Generar borradores con IA de TODAS las pendientes)', value: 'al-dia' },
+        { name: '📤  Subir tareas a Moodle (Enviar borradores listos a la plataforma)', value: 'subir' },
+        { name: '✨  Generar borradores con IA solo de esta semana', value: 'borrador' },
         { name: '🔄  Sincronizar tareas nuevas de Moodle', value: 'sync' },
         { name: '⚡  Comprobar actualizaciones de Jash', value: 'actualizar' },
         { name: '⚙️   Configuración y perfiles', value: 'config' },
@@ -155,6 +157,12 @@ export function buildProgram() {
         break;
       case 'tareas':
         await tareas({}, g());
+        break;
+      case 'al-dia':
+        await ponerseAlDia({}, g());
+        break;
+      case 'subir':
+        await subirBorradores({}, g());
         break;
       case 'borrador':
         await borrador([], { semana: true }, g());
@@ -218,10 +226,24 @@ export function buildProgram() {
     .action((id) => abrir(id, g()));
 
   program
-    .command('entregar <id>')
+    .command('entregar [id]')
     .description('muestra la vista previa y, si apruebas, sube la entrega a Moodle')
     .option('--final', 'además la envía para calificar (definitivo)')
-    .action((id, opts) => entregar(id, opts, g()));
+    .action((id, opts) => (id ? entregar(id, opts, g()) : subirBorradores(opts, g())));
+
+  program
+    .command('al-dia')
+    .alias('ponerse-al-dia')
+    .description('genera borradores con IA de TODAS las tareas pendientes (vencidas + próximas)')
+    .option('-i, --indicaciones <texto>', 'indicaciones extra para la IA')
+    .option('-f, --forzar', 'rehace las que ya tienen borrador')
+    .action((opts) => ponerseAlDia(opts, g()));
+
+  program
+    .command('subir')
+    .description('sube todos los borradores listos directamente a Moodle')
+    .option('--final', 'además las envía definitivamente para calificar')
+    .action((opts) => subirBorradores(opts, g()));
 
   // ----- Recordatorios -----
   const rec = program
