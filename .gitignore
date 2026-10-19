@@ -1,0 +1,22 @@
+# Dependencias
+node_modules/
+
+# Archivos de depuración y logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Entorno y credenciales locales
+.env
+.env.*
+secrets.json
+secrets.enc
+
+# Carpetas de datos de usuario y pruebas locales
+.jash/
+scratch/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

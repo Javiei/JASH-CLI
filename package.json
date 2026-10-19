@@ -1,0 +1,42 @@
+{
+  "name": "jash-cli",
+  "version": "0.1.0",
+  "description": "Jash: asistente de tareas escolares en la terminal. Se conecta a Moodle y a agentes de IA (OpenAI, Claude, Gemini, Ollama).",
+  "type": "module",
+  "bin": {
+    "jash": "bin/jash.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node bin/jash.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "keywords": [
+    "cli",
+    "moodle",
+    "ai",
+    "asistente",
+    "tareas",
+    "openai",
+    "claude",
+    "gemini",
+    "ollama"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.3",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "chalk": "^6.0.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^15.0.0",
+    "marked": "^18.1.1",
+    "ora": "^9.4.1"
+  }
+}
