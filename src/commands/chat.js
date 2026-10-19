@@ -110,6 +110,9 @@ export async function chat(gopts) {
   // Limpiar la pantalla para crear la atmósfera inmersiva
   console.clear();
 
+  // Mostrar la mascota animada de Jash
+  await animateLines(mascotArt(), { delay: 8 });
+
   const overdue = overdueTasks(session.state);
   const weekTasks = upcoming(session.state, 7, { includeUndated: true });
 
@@ -121,7 +124,7 @@ export async function chat(gopts) {
       overdueCount: overdue.length,
       weekCount: weekTasks.length,
     }),
-    { delay: 16 }
+    { delay: 12 }
   );
 
   const divider = () => chalk.hex('#1e293b')('─'.repeat(Math.min(stdout.columns || 75, 75)));
@@ -164,6 +167,7 @@ export async function chat(gopts) {
             history = [];
             focus.length = 0;
             console.clear();
+            await animateLines(mascotArt(), { delay: 6 });
             await animateLines(
               chatHud({
                 user: session.state.site?.fullname || session.profile.moodle?.fullname || session.profile.name,
@@ -172,7 +176,7 @@ export async function chat(gopts) {
                 overdueCount: overdueTasks(session.state).length,
                 weekCount: upcoming(session.state, 7, { includeUndated: true }).length,
               }),
-              { delay: 14 }
+              { delay: 10 }
             );
             console.log(divider());
             console.log(chalk.dim('  Memoria reiniciada. Puedes empezar una nueva consulta.'));
