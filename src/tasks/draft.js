@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DRAFT_SYSTEM, NOTES_HEADING, draftUserPrompt } from '../ai/prompts.js';
-import { prepareTaskFolder, readTextAttachments } from './workspace.js';
+import { prepareTaskFolder, readTextAttachments, safeName } from './workspace.js';
+import { createDocxBuffer } from './docx.js';
 
 /** Separa el borrador de la sección de notas privadas para el estudiante. */
 export function splitDraft(text) {
@@ -12,11 +13,14 @@ export function splitDraft(text) {
 
 /**
  * Genera el borrador de una tarea con la IA y lo guarda en su carpeta:
- *   borrador.md  -> el trabajo (lo que se entregaría tras tu revisión)
- *   notas.md     -> supuestos y puntos a revisar (nunca se sube)
+ *   <Materia>/<Tarea>/
+ *     ├─ README.md                -> Explicación completa del enunciado y resolución
+ *     ├─ [Nombre de Tarea].docx   -> Documento Word listo para entregar o editar
+ *     ├─ adjuntos/                -> Material que dejó el profesor
+ *     └─ entrega/                 -> Archivos finales para subir a Moodle
  */
 export async function generateDraft(session, ai, client, task, { instructions = '', onProgress = () => {} } = {}) {
-  onProgress('Preparando carpeta…');
+  onProgress('Preparando carpeta de la materia…');
   const dir = await prepareTaskFolder(session.profile, task, client, { onProgress });
   const attachmentsText = readTextAttachments(dir);
 
@@ -26,16 +30,67 @@ export async function generateDraft(session, ai, client, task, { instructions = 
   });
   const { draft, notes } = splitDraft(raw);
 
-  const draftFile = path.join(dir, 'borrador.md');
-  if (fs.existsSync(draftFile)) {
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    fs.renameSync(draftFile, path.join(dir, `borrador.anterior-${stamp}.md`));
-  }
-  fs.writeFileSync(draftFile, draft + '\n', 'utf8');
-  if (notes) fs.writeFileSync(path.join(dir, 'notas.md'), notes + '\n', 'utf8');
+  // Generar documento Word (.docx)
+  onProgress('Generando documento de Word (.docx)…');
+  const docxBuffer = await createDocxBuffer({
+    title: task.name,
+    course: task.courseName || task.course,
+    author: session.state.site?.fullname || session.profile.moodle?.fullname || session.profile.name,
+    content: draft,
+  });
 
-  task.local = { ...task.local, state: 'borrador', dir, draftAt: new Date().toISOString(), model: ai.label };
+  const docxFileName = `${safeName(task.name)}.docx`;
+  const docxPath = path.join(dir, docxFileName);
+  fs.writeFileSync(docxPath, docxBuffer);
+
+  // Guardar copia lista en entrega/ para envíos a Moodle
+  const entregaDocx = path.join(dir, 'entrega', docxFileName);
+  fs.writeFileSync(entregaDocx, docxBuffer);
+
+  // Si Moodle acepta texto en línea, guardamos texto.md en entrega/
+  if (task.submissionTypes?.includes('onlinetext')) {
+    fs.writeFileSync(path.join(dir, 'entrega', 'texto.md'), draft + '\n', 'utf8');
+  }
+
+  // Actualizar o crear README.md con la explicación detallada
+  const readmePath = path.join(dir, 'README.md');
+  const baseReadme = fs.existsSync(readmePath) ? fs.readFileSync(readmePath, 'utf8') : `# ${task.name}\n`;
+
+  const explanation = [
+    '',
+    '---',
+    '',
+    '## 💡 Explicación y Resolución de la Tarea',
+    '',
+    `📄 **Documento de Word generado:** [\`${docxFileName}\`](./${encodeURIComponent(docxFileName)})`,
+    '',
+    '### Resumen del contenido:',
+    '',
+    draft,
+    '',
+    notes
+      ? `### 📝 Notas y Sugerencias para el Estudiante:\n\n${notes.replace(/^##\s+Notas[^\n]*\n+/i, '')}`
+      : null,
+    '',
+    '---',
+    '_Tip: Puedes abrir el documento `.docx` en Microsoft Word o Google Docs para darle tu toque personal antes de entregar._',
+    '',
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+
+  fs.writeFileSync(readmePath, baseReadme.split('\n---\n## 💡 Explicación')[0].trimEnd() + '\n' + explanation, 'utf8');
+
+  task.local = {
+    ...task.local,
+    state: 'borrador',
+    dir,
+    docxFile: docxPath,
+    draftAt: new Date().toISOString(),
+    model: ai.label,
+  };
   session.state.tasks[task.id] = task;
   session.saveState();
-  return { dir, draftFile, hasNotes: Boolean(notes) };
+
+  return { dir, draftFile: docxPath, docxFile: docxPath, hasNotes: Boolean(notes) };
 }

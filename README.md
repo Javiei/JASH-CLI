@@ -81,10 +81,21 @@ Ejecuta el asistente interactivo para configurar tu usuario, tu colegio y tu IA:
 jash registro
 ```
 Te solicitará:
-1. Nombre del perfil (ej: `javier`) y contraseña maestra.
+1. Nombre del perfil (ej: `javier`).
 2. Dirección Moodle de tu colegio (ej. `aula.micolegio.edu`) y tus credenciales de alumno.
 3. Proveedor de IA preferido y su API Key.
 4. Carpeta donde deseas que se guarden tus tareas (por defecto `Documentos/Jash/<perfil>`).
+
+Tus tareas se organizan limpiamente directamente por materia:
+```
+Documentos/Jash/javier/
+  └── Filosofía/
+       └── Ensayo sobre la Ética/
+            ├── Ensayo sobre la Ética.docx   <-- Documento Word listo para entregar o editar
+            ├── README.md                    <-- Explicación completa del enunciado y resolución
+            ├── adjuntos/                    <-- Archivos que dejó el profesor en Moodle
+            └── entrega/                     <-- Archivo final que se subirá a Moodle
+```
 
 ### 2. Sincronizar tareas
 Descarga todas las materias, tareas pendientes y adjuntos:
@@ -100,8 +111,11 @@ jash sync
 # Ver tareas pendientes
 jash tareas
 
+# Ver tareas que ya vencieron y no has entregado
+jash tareas -v
+
 # Ver solo las tareas de los próximos 7 días
-jash tareas --semana
+jash tareas -s
 
 # Ver todas (incluyendo entregadas)
 jash tareas --todas
@@ -118,9 +132,10 @@ jash borrador --semana
 # Generar para una tarea específica por ID con indicaciones:
 jash borrador 95 -i "Enfoque crítico en 500 palabras con bibliografía"
 ```
+Cada borrador crea automáticamente un **documento Word (`.docx`)** formateado listo para imprimir o enviar, junto con un **`README.md`** explicativo dentro de la carpeta de la materia.
 
 ### 5. Abrir la carpeta de la tarea
-Abre directamente la carpeta en el Explorador de Windows para que revises el enunciado, los adjuntos y edites `borrador.md` o agregues tus PDFs en `entrega/`:
+Abre directamente la carpeta en el Explorador de Windows para que revises el documento Word, la explicación y los adjuntos:
 
 ```bash
 jash abrir 95

@@ -37,8 +37,10 @@ export function planSubmission(task) {
   if (acceptsText) {
     const custom = path.join(dir, 'entrega', 'texto.md');
     const draft = path.join(dir, 'borrador.md');
+    const readme = path.join(dir, 'README.md');
     if (fs.existsSync(custom)) textSource = custom;
     else if (!files.length && fs.existsSync(draft)) textSource = draft;
+    else if (!files.length && fs.existsSync(readme)) textSource = readme;
   }
 
   if (!files.length && !textSource) {

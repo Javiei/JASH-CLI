@@ -30,7 +30,6 @@ export function safeName(s, max = 60) {
 export function taskDir(profile, task) {
   return path.join(
     profile.workspaceDir,
-    `Semana ${weekLabel(task.duedate)}`,
     safeName(task.course, 40),
     safeName(task.name),
   );
@@ -53,9 +52,9 @@ export function readTextAttachments(dir, maxChars = 20000) {
 }
 
 /**
- * Crea la carpeta de la tarea con su enunciado y adjuntos:
- *   Semana 2026-S43/Matemáticas/Guía 3/
- *     ├─ enunciado.md
+ * Crea la carpeta de la tarea con su explicación README.md y adjuntos:
+ *   Matemáticas/Guía 3/
+ *     ├─ README.md       (explicación de la tarea)
  *     ├─ adjuntos/       (archivos del profesor)
  *     ├─ entrega/        (archivos finales que se subirán)
  *     └─ meta.json
@@ -69,20 +68,22 @@ export async function prepareTaskFolder(profile, task, client, { onProgress = ()
     `# ${task.name}`,
     '',
     `- **Materia:** ${task.courseName || task.course}`,
-    `- **Entrega:** ${formatDate(task.duedate)}`,
-    task.cutoffdate ? `- **Fecha límite (cierre):** ${formatDate(task.cutoffdate)}` : null,
-    `- **Tipo de entrega:** ${task.submissionTypes.join(', ') || '—'}`,
-    `- **Enlace:** ${task.url}`,
+    `- **Fecha de entrega:** ${formatDate(task.duedate)}`,
+    task.cutoffdate ? `- **Fecha límite de cierre:** ${formatDate(task.cutoffdate)}` : null,
+    `- **Tipo de entrega en Moodle:** ${task.submissionTypes.join(', ') || '—'}`,
+    `- **Enlace directo a Moodle:** ${task.url}`,
     '',
-    '## Enunciado',
+    '---',
     '',
-    task.intro || '_Sin enunciado escrito._',
+    '## 📋 Enunciado de la Tarea',
     '',
-    task.attachments.length ? '## Adjuntos\n\n' + task.attachments.map((a) => `- adjuntos/${a.filename}`).join('\n') : null,
+    task.intro || '_Sin enunciado escrito por el profesor._',
+    '',
+    task.attachments.length ? '## 📎 Adjuntos del Profesor\n\n' + task.attachments.map((a) => `- [${a.filename}](adjuntos/${safeName(a.filename, 120)})`).join('\n') : null,
   ]
     .filter((l) => l !== null)
     .join('\n');
-  fs.writeFileSync(path.join(dir, 'enunciado.md'), md, 'utf8');
+  fs.writeFileSync(path.join(dir, 'README.md'), md, 'utf8');
 
   if (client) {
     for (const a of task.attachments) {

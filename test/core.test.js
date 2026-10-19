@@ -42,6 +42,28 @@ test('guardar y leer secretos directos', () => {
   assert.equal(sec.aiApiKey, 'key-abc');
 });
 
+import { taskDir } from '../src/tasks/workspace.js';
+import { createDocxBuffer } from '../src/tasks/docx.js';
+
+test('taskDir organiza directamente por Materia/Tarea sin filtro de semana', () => {
+  const profile = { workspaceDir: '/workspace' };
+  const task = { course: 'Matemáticas Avanzadas', name: 'Guía de Derivadas', duedate: 1792454400 };
+  const dir = taskDir(profile, task);
+  assert.ok(dir.includes('Matemáticas Avanzadas'));
+  assert.ok(dir.includes('Guía de Derivadas'));
+  assert.ok(!dir.includes('Semana'));
+});
+
+test('createDocxBuffer genera un archivo Word válido', async () => {
+  const buf = await createDocxBuffer({
+    title: 'Tarea 1',
+    course: 'Historia',
+    content: '# Introducción\n\nTexto con **negrita** y *cursiva*.\n- Item 1\n- Item 2',
+  });
+  assert.ok(Buffer.isBuffer(buf));
+  assert.ok(buf.length > 1000);
+});
+
 test('isoWeek y safeName', () => {
   assert.deepEqual(isoWeek(new Date(2026, 9, 19)), { year: 2026, week: 43 });
   assert.deepEqual(isoWeek(new Date(2027, 0, 1)), { year: 2026, week: 53 });

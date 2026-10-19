@@ -168,11 +168,11 @@ export async function borrador(ids, opts, gopts) {
 
   if (done.length) {
     console.log(`
-${chalk.bold('Listo.')} Borradores en: ${chalk.underline(session.profile.workspaceDir)}
+${chalk.bold('Listo.')} Archivos generados en: ${chalk.underline(session.profile.workspaceDir)}
 
-  1. Abre cada carpeta y revisa ${chalk.cyan('borrador.md')} y ${chalk.cyan('notas.md')}  ${chalk.dim('(jash abrir <id>)')}
-  2. Edita el borrador o exporta tu versión final a la carpeta ${chalk.cyan('entrega/')}
-  3. Cuando lo apruebes: ${chalk.cyan('jash entregar <id>')}
+  1. Abre la carpeta de la materia y revisa el documento ${chalk.cyan('Word (.docx)')} y la explicación en ${chalk.cyan('README.md')}  ${chalk.dim('(jash abrir <id>)')}
+  2. Puedes editar el documento Word directamente o colocar tus archivos en la carpeta ${chalk.cyan('entrega/')}
+  3. Cuando quieras subirlo a Moodle: ${chalk.cyan('jash entregar <id>')}
 `);
   }
 }

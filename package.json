@@ -1,6 +1,6 @@
 {
   "name": "jash-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Jash: asistente de tareas escolares en la terminal. Se conecta a Moodle y a agentes de IA (OpenAI, Claude, Gemini, Ollama).",
   "type": "module",
   "bin": {
@@ -36,6 +36,7 @@
     "chalk": "^6.0.1",
     "cli-table3": "^0.6.5",
     "commander": "^15.0.0",
+    "docx": "^9.12.0",
     "marked": "^18.1.1",
     "ora": "^9.4.1"
   }
